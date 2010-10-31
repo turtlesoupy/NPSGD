@@ -66,14 +66,21 @@ Visit http://192.168.245.110:8000/confirm_submission/%s to start your job.
 Natural Phenomenon Simulation Group
 University of Waterloo
 """ % (code,)
-        npsgd_email.sendMessage(email, "NPSG Model Run (Confirmation Required)", msg)
+        #npsgd_email.sendMessage(email, "NPSG Model Run (Confirmation Required)", msg)
         self.render("confirm.html", email=email, code=code)
 
 
 
     def setupModelTask(self):
         email = self.get_argument("email")
-        task  = NPSGDModelTask(email)
+
+        paramDict = {}
+        for param in self.model.parameters:
+            argVal = self.get_argument(param.name)
+            value = param.withValue(argVal)
+            paramDict[param.name] = value.asDict()
+
+        task = self.model(email, paramDict)
         return task
 
 
@@ -88,9 +95,10 @@ class ClientConfirmRequest(tornado.web.RequestHandler):
         except KeyError, e:
             raise tornado.web.HTTPError(404)
 
-        self.write("Successful confirmation!")
         logging.info("Client confirmed request %s", confirmationCode)
         modelQueue.putTask(confirmedRequest)
+
+        self.render("confirmed.html")
             
 
 class WorkerInfo(tornado.web.RequestHandler):
@@ -126,6 +134,7 @@ def setupClientApplication():
         appList.append(("/models/%s" % modelName, ClientModelRequest, dict(model=modelManager.getModel(modelName))))
 
     settings = {
+        "static_path": os.path.join(os.path.dirname(__file__), "static"),
         "ui_modules": npsgd_ui_modules
     }
 

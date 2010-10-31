@@ -1,32 +1,71 @@
 import os
 import sys
+import uuid
 import logging
 import subprocess
 import npsgd_email
+
 from npsgd_model_manager import NPSGDModelMount
 
+class LatexError(RuntimeError): pass
 class NPSGDModelTask(object):
     __metaclass__ = NPSGDModelMount
     abstractModel = "NPSGDModelTask"
 
+    #Every model short implement a subset of these
+    short_name = "unspecified_name"
+    subtitle   = "Unspecified Subtitle"
+
+    def __init__(self, emailAddress, modelParameters={}):
+        self.emailAddress      = emailAddress
+        self.modelParameters   = []
+        self.latexPreamblePath = "preamble.tex"
+        self.latexFooterPath   = "footer.tex"
+        self.workingDirectory  = "/var/tmp/npsgd/%s" % str(uuid.uuid4())
+
+        for k,v in modelParameters.iteritems():
+            param = self.parameterType(k).fromDict(v)
+            setattr(self, param.name, param)
+            self.modelParameters.append(param)
+
+    def createWorkingDirectory(self):
+        try:
+            os.mkdir(self.workingDirectory)
+        except OSError, e:
+            logging.warning(e)
+
+    def parameterType(self, parameterName):
+        for pClass in self.__class__.parameters:
+            if parameterName == pClass.name:
+                return pClass
+
+        return None
+
     @classmethod
     def fromDict(cls, dictionary):
         emailAddress = dictionary["emailAddress"]
-
-        return cls(emailAddress)
-
-    def __init__(self, emailAddress):
-        self.emailAddress      = emailAddress
-        self.latexPreamblePath = "preamble.tex"
-        self.latexFooterPath   = "footer.tex"
+        return cls(emailAddress, dictionary["modelParameters"])
 
     def asDict(self):
         return {
-            "emailAddress" : self.emailAddress
+            "emailAddress" :   self.emailAddress,
+            "modelName": self.__class__.short_name,
+            "modelParameters": dict((p.name, p.asDict()) for p in self.modelParameters)
         }
 
     def latexBody(self):
         return "This is a test for %s" % self.emailAddress
+
+    def latexParameterTable(self):
+        paramRows = "\\\\\n".join(p.asLatexRow() for p in self.modelParameters)
+        return """
+        \\begin{centering}
+        \\begin{tabular*}{6in}{@{\\extracolsep{\\fill}} c c c}
+        \\textbf{Name} & \\textbf{Description} & \\textbf{Value} \\\\
+        \\hline
+        %s
+        \\end{tabular*}
+        \\end{centering}""" % paramRows
 
     def emailBody(self):
         return "Model run results from NPSG"
@@ -43,33 +82,25 @@ class NPSGDModelTask(object):
         latex = "%s\n%s\n%s" % (preamble, self.latexBody(), footer)
         logging.info(latex)
 
-        workingDirectory = "/var/tmp/npsgd"
-        try:
-            os.mkdir(workingDirectory)
-        except OSError, e:
-            pass
-
-        texPath = os.path.join(workingDirectory, "test_task.tex")
-        pdfOutputPath = os.path.join(workingDirectory, "test_task.pdf")
+        texPath = os.path.join(self.workingDirectory, "test_task.tex")
+        pdfOutputPath = os.path.join(self.workingDirectory, "test_task.pdf")
 
         with open(texPath, 'w') as f:
             f.write(latex)
 
         logging.info("Calling PDFLatex to generate pdf output")
-        retCode = subprocess.call(["pdflatex", 
-            "-output-directory=%s" % workingDirectory, 
-            texPath])
+        retCode = subprocess.call(["pdflatex", "-halt-on-error", texPath], cwd=self.workingDirectory)
         logging.info("PDFLatex terminated with error code %d", retCode)
 
+        if retCode != 0:
+            raise LatexError("Bad exit code from latex")
 
         with open(pdfOutputPath, 'rb') as f:
             pdf = f.read()
 
         return pdf
 
-    def run(self):
-        logging.info("Running default task for '%s'", self.emailAddress)
-        pdf = self.generatePDF()
+    def sendResultsEmail(self, attachments=[]):
         logging.info("Sending results email")
         npsgd_email.sendMessage(self.emailAddress, "NPSG Model Run Results", """
 Hi,
@@ -80,5 +111,15 @@ of the results to this message.
 
 Natural Phenomenon Simulation Group
 University of Waterloo
-""", [("npsg_results.pdf", pdf)])
+""", attachments)
         logging.info("Sent!")
+
+    def runModel(self):
+        logging.warning("Called default run model - this should be overridden")
+
+    def run(self):
+        logging.info("Running default task for '%s'", self.emailAddress)
+        self.createWorkingDirectory()
+        self.runModel()
+        pdf = self.generatePDF()
+        self.sendResultsEmail([('npsg_results.pdf', pdf)])

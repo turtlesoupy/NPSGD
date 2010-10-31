@@ -6,7 +6,10 @@ import logging
 import urllib2
 
 import npsgd_config
+import npsgd_model_manager
 from npsgd_model_task import NPSGDModelTask
+
+modelManager = npsgd_model_manager.modelManager
 
 
 class NPSGDWorker(object):
@@ -68,7 +71,9 @@ class NPSGDWorker(object):
 
     def processTask(self, taskDict):
         try:
-            taskObject = NPSGDModelTask.fromDict(taskDict)
+            model = modelManager.getModel(taskDict["modelName"])
+            logging.info("Creating a model task for '%s'", taskDict["modelName"])
+            taskObject = model.fromDict(taskDict)
         except KeyError, e:
             logging.warning("Was unable to deserialize model task")
             return
@@ -78,6 +83,8 @@ class NPSGDWorker(object):
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
+    npsgd_model_manager.setupModels()
+
     config = npsgd_config.readDefaultConfig()
 
     worker = NPSGDWorker(config.serverAddress, config.serverWorkerPort)

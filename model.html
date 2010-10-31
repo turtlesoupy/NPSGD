@@ -1,0 +1,21 @@
+{% extends "base.html %}
+{% block content %}
+<h1>
+    {{model.short_name.capitalize()}}
+</h1>
+<h5>
+    {{model.subtitle}}
+</h5>
+
+
+<form method="post">
+    Enter your email address: <input type="text" name="email">
+
+    <h4>Model Parameters</h4>
+    {% for parameter in model.parameters %}
+        {{modules.ParameterRenderer(parameter)}}  <br />
+    {% end %}
+
+    <input type="submit">
+</form>
+{% end %}
