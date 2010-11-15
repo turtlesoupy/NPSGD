@@ -1,0 +1,34 @@
+body { background: #F5F5FF url(/images/CGeese_bg.jpgx);
+       background-attachment: fixed;
+       background-repeat: no-repeat;
+       background-position: 150% 150%;
+     }
+
+code { color:blue;
+       font-family: "courier";
+     }
+
+p { color:black;
+  }
+
+.mh2 { color:black;
+     font-family: arial;
+     font-weight: bold;
+    }
+
+.mh1 { color:black;
+     font-family: serif;
+     font-weight: normal;
+     font-size: x-large;
+    }
+
+a:link   {color:blue}
+a:visited{color:blue}
+a:hover  {color:black}
+a:active {color:black}
+
+.sh1 { font-size:x-small }
+.sh2 { font-size:small }
+
+.gallery table { float: left;
+                 margin:0 5px 20px 0; }

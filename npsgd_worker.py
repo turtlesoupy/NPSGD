@@ -4,13 +4,12 @@ import time
 import json
 import logging
 import urllib2
+from optparse import OptionParser
 
-import npsgd_config
-import npsgd_model_manager
-from npsgd_model_task import NPSGDModelTask
-
-modelManager = npsgd_model_manager.modelManager
-
+from npsgd import config
+from npsgd import model_manager
+from npsgd.model_manager import modelManager
+from npsgd.model_task import ModelTask
 
 class NPSGDWorker(object):
     def __init__(self, serverAddress, serverPort):
@@ -80,16 +79,21 @@ class NPSGDWorker(object):
 
         taskObject.run()
 
-
 def main():
+    parser = OptionParser()
+    parser.add_option('-a', '--server-address', dest="server_address",
+            help="Server address (default 127.0.0.1)", type="string", default="127.0.0.1")
+    parser.add_option('-p', '--server-port', dest="server_port",
+            help="Server port (default 8001)", type="int", default="8001")
+
+    (options, args) = parser.parse_args()
+
     logging.basicConfig(level=logging.DEBUG)
-    npsgd_model_manager.setupModels()
+    model_manager.setupModels()
 
-    config = npsgd_config.readDefaultConfig()
-
-    worker = NPSGDWorker(config.serverAddress, config.serverWorkerPort)
+    myConfig = config.readDefaultConfig()
+    worker = NPSGDWorker(options.server_address, options.server_port)
     worker.loop()
-
 
 if __name__ == "__main__":
     main()

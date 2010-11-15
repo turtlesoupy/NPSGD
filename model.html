@@ -1,7 +1,7 @@
 {% extends "base.html %}
 {% block content %}
 <h1>
-    {{model.short_name.capitalize()}}
+    {{model.full_name}}
 </h1>
 <h5>
     {{model.subtitle}}
@@ -12,9 +12,15 @@
     Enter your email address: <input type="text" name="email">
 
     <h4>Model Parameters</h4>
-    {% for parameter in model.parameters %}
-        {{modules.ParameterRenderer(parameter)}}  <br />
-    {% end %}
+    <table>
+        <tr>
+            <th>Parameter</th><th>Value</th>
+        </tr>
+
+        {% for parameter in model.parameters %}
+            {{modules.ParameterRenderer(parameter)}} 
+        {% end %}
+    </table>
 
     <input type="submit">
 </form>

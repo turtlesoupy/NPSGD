@@ -7,14 +7,17 @@ import tornado.web
 import tornado.ioloop
 import tornado.escape
 import tornado.httpserver
+from ConfigParser import SafeConfigParser
+from optparse import OptionParser
 
-import npsgd_email
-import npsgd_model_manager
-from npsgd_model_manager import modelManager
-from npsgd_queue import NPSGDQueue
-from npsgd_model_task import NPSGDModelTask
-import npsgd_model_parameters
-import npsgd_ui_modules
+from npsgd import email_manager
+from npsgd import model_manager
+from npsgd import model_parameters
+from npsgd import ui_modules
+
+from npsgd.model_manager import modelManager
+from npsgd.task_queue import TaskQueue
+from npsgd.model_task import ModelTask
 
 class ConfirmationMap(object):
     class ConfirmationEntry(object):
@@ -66,7 +69,7 @@ Visit http://192.168.245.110:8000/confirm_submission/%s to start your job.
 Natural Phenomenon Simulation Group
 University of Waterloo
 """ % (code,)
-        #npsgd_email.sendMessage(email, "NPSG Model Run (Confirmation Required)", msg)
+        #email_manager.sendMessage(email, "NPSG Model Run (Confirmation Required)", msg)
         self.render("confirm.html", email=email, code=code)
 
 
@@ -119,10 +122,8 @@ class WorkerTaskRequest(tornado.web.RequestHandler):
                 "task": task.asDict()
             }))
 
-modelQueue = NPSGDQueue()
+modelQueue      = TaskQueue()
 confirmationMap = ConfirmationMap()
-
-
 
 def setupClientApplication():
     appList = [ 
@@ -135,7 +136,7 @@ def setupClientApplication():
 
     settings = {
         "static_path": os.path.join(os.path.dirname(__file__), "static"),
-        "ui_modules": npsgd_ui_modules
+        "ui_modules": ui_modules
     }
 
     return tornado.web.Application(appList, **settings)
@@ -146,26 +147,28 @@ def setupWorkerApplication():
         (r"/work_task", WorkerTaskRequest)
     ])
 
-
-clientPort = 8000
-workerPort = 8001
-
 def main():
+    parser = OptionParser()
+    parser.add_option('-c', '--client-port', dest='client_port',
+                        help="Client http port (for serving html)", default=8000, type="int")
+
+    parser.add_option('-w', '--worker-port', dest='worker_port',
+                        help="Worker port (for serving html)", default=8001, type="int")
+
+    (options, args) = parser.parse_args()
+
     logging.basicConfig(level=logging.DEBUG)
-    npsgd_model_manager.setupModels()
-    port = 8000
+    model_manager.setupModels()
     clientHTTP = tornado.httpserver.HTTPServer(setupClientApplication())
     workerHTTP = tornado.httpserver.HTTPServer(setupWorkerApplication())
 
-    clientHTTP.listen(port)
-    workerHTTP.listen(workerPort)
+    clientHTTP.listen(options.client_port)
+    workerHTTP.listen(options.worker_port)
 
-    print >>sys.stderr, "NPSGD server running on port %d" % clientPort
-    print >>sys.stderr, "NPSGD worker server running on port %d" % workerPort
+    print >>sys.stderr, "NPSGD web server running on port %d" % options.client_port
+    print >>sys.stderr, "NPSGD worker server running on port %d" % options.worker_port
 
     tornado.ioloop.IOLoop.instance().start()
-
-
 
 if __name__ == "__main__":
     main()
