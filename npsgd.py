@@ -7,10 +7,10 @@ import tornado.web
 import tornado.ioloop
 import tornado.escape
 import tornado.httpserver
-from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 
-from npsgd import email_manager
+from npsgd.email_manager import Email
+from npsgd.email_manager import email_manager_thread 
 from npsgd import model_manager
 from npsgd import model_parameters
 from npsgd import ui_modules
@@ -18,6 +18,7 @@ from npsgd import ui_modules
 from npsgd.model_manager import modelManager
 from npsgd.task_queue import TaskQueue
 from npsgd.model_task import ModelTask
+from npsgd.config import config
 
 class ConfirmationMap(object):
     class ConfirmationEntry(object):
@@ -50,29 +51,24 @@ class ClientModelRequest(tornado.web.RequestHandler):
     def initialize(self, model):
         self.model = model
 
-    def get(self):
-        self.render('model.html', model=self.model)
-
     def post(self):
-        task = self.setupModelTask()
+        try:
+            task = self.setupModelTask()
+        except tornado.web.HTTPError, e:
+            self.render(config.modelTemplatePath, model=self.model)
+            return
+
+        self.pushAndRender(task)
+
+
+    def pushAndRender(self, task):
         code = confirmationMap.putRequest(task)
-        email = task.emailAddress
-        logging.info("Generated a request for %s, confirmation %s required", email, code)
-        msg="""
-Hi,
-
-Someone from this email address recently submitted a message using the NPSG online
-model tool. We need confirmation in order for you to proceed:
-
-Visit http://192.168.245.110:8000/confirm_submission/%s to start your job.
-
-Natural Phenomenon Simulation Group
-University of Waterloo
-""" % (code,)
-        #email_manager.sendMessage(email, "NPSG Model Run (Confirmation Required)", msg)
-        self.render("confirm.html", email=email, code=code)
-
-
+        emailAddress = task.emailAddress
+        logging.info("Generated a request for %s, confirmation %s required", emailAddress, code)
+        body = config.confirmEmailTemplate.generate(code=code)
+        emailObject = Email(emailAddress, config.confirmEmailSubject, body)
+        email_manager_thread.addEmail(emailObject)
+        self.render(config.confirmTemplatePath, email=emailAddress, code=code)
 
     def setupModelTask(self):
         email = self.get_argument("email")
@@ -101,7 +97,7 @@ class ClientConfirmRequest(tornado.web.RequestHandler):
         logging.info("Client confirmed request %s", confirmationCode)
         modelQueue.putTask(confirmedRequest)
 
-        self.render("confirmed.html")
+        self.render(config.confirmedTemplatePath)
             
 
 class WorkerInfo(tornado.web.RequestHandler):
@@ -149,15 +145,17 @@ def setupWorkerApplication():
 
 def main():
     parser = OptionParser()
-    parser.add_option('-c', '--client-port', dest='client_port',
+    parser.add_option('-c', '--config', dest='config',
+                        help="Config file", default="config.cfg")
+    parser.add_option('-p', '--client-port', dest='client_port',
                         help="Client http port (for serving html)", default=8000, type="int")
-
     parser.add_option('-w', '--worker-port', dest='worker_port',
                         help="Worker port (for serving html)", default=8001, type="int")
 
     (options, args) = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG)
+    config.loadConfig(options.config)
     model_manager.setupModels()
     clientHTTP = tornado.httpserver.HTTPServer(setupClientApplication())
     workerHTTP = tornado.httpserver.HTTPServer(setupWorkerApplication())

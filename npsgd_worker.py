@@ -10,6 +10,7 @@ from npsgd import config
 from npsgd import model_manager
 from npsgd.model_manager import modelManager
 from npsgd.model_task import ModelTask
+from npsgd.config import config
 
 class NPSGDWorker(object):
     def __init__(self, serverAddress, serverPort):
@@ -85,13 +86,16 @@ def main():
             help="Server address (default 127.0.0.1)", type="string", default="127.0.0.1")
     parser.add_option('-p', '--server-port', dest="server_port",
             help="Server port (default 8001)", type="int", default="8001")
+    parser.add_option('-c', '--config', dest="config",
+            help="Configuration file path", type="string", default="config.cfg")
 
     (options, args) = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG)
+    config.loadConfig(options.config)
     model_manager.setupModels()
 
-    myConfig = config.readDefaultConfig()
+
     worker = NPSGDWorker(options.server_address, options.server_port)
     worker.loop()
 

@@ -4,7 +4,9 @@ import uuid
 import logging
 import subprocess
 import email_manager
+import shutil
 
+from config import config
 from model_manager import ModelMount
 
 class LatexError(RuntimeError): pass
@@ -20,8 +22,6 @@ class ModelTask(object):
     def __init__(self, emailAddress, modelParameters={}):
         self.emailAddress      = emailAddress
         self.modelParameters   = []
-        self.latexPreamblePath = "preamble.tex"
-        self.latexFooterPath   = "footer.tex"
         self.workingDirectory  = "/var/tmp/npsgd/%s" % str(uuid.uuid4())
 
         for k,v in modelParameters.iteritems():
@@ -86,12 +86,7 @@ class ModelTask(object):
         return attach
 
     def generatePDF(self):
-        with open(self.latexPreamblePath) as pf:
-            preamble = pf.read()
-        with open(self.latexFooterPath) as ff:
-            footer = ff.read()
-
-        latex = "%s\n%s\n%s" % (preamble, self.latexBody(), footer)
+        latex = config.latexResultTemplate.generate(model_results=self.latexBody())
         logging.info(latex)
 
         texPath = os.path.join(self.workingDirectory, "test_task.tex")
@@ -101,7 +96,7 @@ class ModelTask(object):
             f.write(latex)
 
         logging.info("Calling PDFLatex to generate pdf output")
-        retCode = subprocess.call(["pdflatex", "-halt-on-error", texPath], cwd=self.workingDirectory)
+        retCode = subprocess.call([config.pdfLatexPath, "-halt-on-error", texPath], cwd=self.workingDirectory)
         logging.info("PDFLatex terminated with error code %d", retCode)
 
         if retCode != 0:
@@ -114,16 +109,7 @@ class ModelTask(object):
 
     def sendResultsEmail(self, attachments=[]):
         logging.info("Sending results email")
-        email_manager.sendMessage(self.emailAddress, "NPSG Model Run Results", """
-Hi,
-
-This email address recently requested a model run for the NPSG group at the university of
-Waterloo. We are happy to report that the run succeeded. We have attached a pdf copy
-of the results to this message.
-
-Natural Phenomenon Simulation Group
-University of Waterloo
-""", attachments)
+        email_manager.sendMessage(self.emailAddress, config.resultsEmailBodyTemplate.generate())
         logging.info("Sent!")
 
     def runModel(self):
@@ -132,5 +118,8 @@ University of Waterloo
     def run(self):
         logging.info("Running default task for '%s'", self.emailAddress)
         self.createWorkingDirectory()
-        self.runModel()
-        self.sendResultsEmail(self.getAttachments())
+        try:
+            self.runModel()
+            self.sendResultsEmail(self.getAttachments())
+        finally:
+            shutil.rmtree(self.workingDirectory)

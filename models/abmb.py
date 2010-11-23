@@ -3,10 +3,10 @@ from npsgd.model_task  import ModelTask
 from npsgd.matlab_task import MatlabTask
 from npsgd.model_parameters import StringParameter, IntegerParameter, RangeParameter, FloatParameter
 
-class ABMU(MatlabTask): 
-    short_name = 'abmu'
-    full_name  = 'ABMU'
-    subtitle='Algorithmic BDF Model, Unifacial'
+class ABMB(MatlabTask): 
+    short_name = 'abmb'
+    full_name  = 'ABMB'
+    subtitle='Algorithmic BDF Model, Bifacial'
     parameters = [
             IntegerParameter('nSamples', description="Number of Samples", 
                 rangeStart=100, rangeEnd=10000, step=1),
@@ -30,7 +30,7 @@ class ABMU(MatlabTask):
                 default=0.79866, units="kg/m^3"),
             FloatParameter('carotenoidConcentration', description="Carotenoid Concentration",
                 default=0.658895, units="kg/m^3"),
-            IntegerParameter('bifacial', description="Hidden bifacial parameter", default=0, hidden=True)
+            IntegerParameter('bifacial', description="Hidden bifacial parameter", default=1, hidden=True)
     ]
 
     attachments   = ['reflectance.txt', 'transmittance.txt', 'absorptance.txt',
@@ -40,13 +40,13 @@ class ABMU(MatlabTask):
 
     def latexBody(self):
         return """
-            This is the results of your model run of \\textbf{ABMU} for the 
+            This is the results of your model run of \\textbf{ABMB} for the 
             Natural Phenomenon Simulation Group (NPSG) at University of Waterloo.
 
             Reflectance, transmittance and absorptance curves will appear below followed
             by an appendix containing input parameters. 
 
-            For more information on ABM-U, view \\url{http://www.npsg.uwaterloo.ca/resources/docs/rse2006.pdf}. Thank you for trying out the model!
+            For more information on ABM-B, view \\url{http://www.npsg.uwaterloo.ca/resources/docs/rse2006.pdf}. Thank you for trying out the model!
 
             \\begin{figure}
             \\caption{Reflectance Curve}

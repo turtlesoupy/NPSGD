@@ -34,13 +34,17 @@ class ModelParameter(object):
     def asHTML(self):
         return "No HTML for this parameter type"
 
+    def hiddenHTML(self):
+        return "No hidden HTML for this parameter type"
+
 class StringParameter(ModelParameter):
-    def __init__(self, name, description="", units="", default=None):
+    def __init__(self, name, description="", units="", default=None, hidden=False):
         self.name        = name
         self.description = description
         self.units       = units
         self.default     = default 
-        self.value = None
+        self.value       = None
+        self.hidden      = hidden
         if default != None:
             self.setValue(self.default)
 
@@ -52,19 +56,29 @@ class StringParameter(ModelParameter):
 
     def asLatexRow(self):
         return "%s & %s & %s %s" % (self.name, self.description, latexEscape(self.value), latexEscape(self.units))
-    
-    def asHTML(self):
+
+    def valueString(self):
         if self.value == None:
             valueString = ""
         else:
             valueString = str(self.value)
 
+        return valueString
+
+    def hiddenHTML(self):
+        return "<tr><td></td><td><input type='hidden' name='%s' value='%s' /></td></tr>" % (self.name, self.valueString())
+    
+    def asHTML(self):
+        if self.hidden:
+            return self.hiddenHTML()
+
         return "<tr><td><label for='%s'>%s</label></td><td><input type='text' name='%s' value='%s'/></td></tr>" %\
-                (self.name, self.description, self.name, valueString)
+                (self.name, self.description, self.name, self.valueString())
 
 
 class RangeParameter(ModelParameter):
-    def __init__(self, name, description="", rangeStart=1.0, rangeEnd=10.0, step=1.0, units="", default=None):
+    def __init__(self, name, description="", rangeStart=1.0, rangeEnd=10.0, \
+            step=1.0, units="", default=None, hidden=False):
         self.name        = name
         self.description = description
         self.rangeStart  = rangeStart
@@ -72,6 +86,7 @@ class RangeParameter(ModelParameter):
         self.step        = step
         self.default     = None
         self.units       = units
+        self.hidden      = hidden
         self.value = None
 
         if default != None:
@@ -92,12 +107,30 @@ class RangeParameter(ModelParameter):
     def asLatexRow(self):
         return "%s & %s & %s-%s %s" % (latexEscape(self.name), latexEscape(self.description), self.value[0], self.value[1], latexEscape(self.units))
 
-    def asHTML(self):
+    def valueString(self):
         if self.value == None:
             valueString = ""
         else:
             valueString = "%s-%s" % (self.value[0], self.value[1])
 
+        return valueString
+
+
+    def hiddenHTML(self):
+        if self.hidden:
+            return self.hiddenHTML()
+
+        return """
+                <tr>
+                    <td></td>
+                    <td>
+                        <input type='hidden' name='%s' value='%s' /> %s
+                    </td>
+                </tr>
+""" % (self.name, self.valueString())
+
+
+    def asHTML(self):
         return """
                 <tr class="rangeParameter">
                     <td>
@@ -111,18 +144,20 @@ class RangeParameter(ModelParameter):
                         <div class="slider"></div>
                     </td>
                 </tr>
-""" % (self.name, self.description, self.name, valueString, self.units, self.rangeStart, self.rangeEnd, self.step)
+""" % (self.name, self.description, self.name, self.valueString(), self.units, self.rangeStart, self.rangeEnd, self.step)
 
 class FloatParameter(ModelParameter):
-    def __init__(self, name, description="", rangeStart=None, rangeEnd=None, step=None, units="", default=None):
+    def __init__(self, name, description="", rangeStart=None, rangeEnd=None, \
+            step=None, units="", default=None, hidden=False):
         self.name        = name
         self.description = description
         self.rangeStart  = rangeStart
         self.rangeEnd    = rangeEnd
         self.step        = step
         self.default     = default
-        self.units = units
-        self.value = None
+        self.units       = units
+        self.value       = None
+        self.hidden      = hidden
         if default != None:
             self.setValue(self.default)
 
@@ -135,11 +170,21 @@ class FloatParameter(ModelParameter):
     def asLatexRow(self):
         return "%s & %s & %s %s" % (latexEscape(self.name), latexEscape(self.description), self.value, latexEscape(self.units))
 
-    def asHTML(self):
+    def valueString(self):
         if self.value == None:
             valueString = ""
         else:
             valueString = str(self.value)
+
+        return valueString
+
+    def hiddenHTML(self):
+        return "<tr><td></td><td><input type='hidden' name='%s' value='%s'/></td></tr>" \
+            % (self.name, self.valueString())
+
+    def asHTML(self):
+        if self.hidden:
+            return self.hiddenHTML()
 
         if self.rangeStart != None and self.rangeEnd != None and self.step != None:
             return """
@@ -155,10 +200,10 @@ class FloatParameter(ModelParameter):
                             <div class="slider"></div>
                         </td>
                     </tr>
-    """ % (self.name, self.description, self.name, valueString, self.units, self.rangeStart, self.rangeEnd, self.step)
+    """ % (self.name, self.description, self.name, self.valueString(), self.units, self.rangeStart, self.rangeEnd, self.step)
         else:
             return "<tr><td><label for='%s'>%s</label></td><td><input type='text' name='%s' value='%s'/> %s</td></tr>" \
-                % (self.name, self.description, self.name, valueString, self.units)
+                % (self.name, self.description, self.name, self.valueString(), self.units)
 
 class IntegerParameter(FloatParameter):
     def setValue(self, value):
@@ -178,16 +223,16 @@ def matlabEscape(string):
 
 def latexEscape(string):
     return replaceAll(string,
-            [("\\",r"\textbackslash{}"),
-             ("<", r"\textless{}"),
-             (">", r"\textgreater{}"),
-             ("~", r"\texasciitilde{}"),
-             ("^", r"\testasciicircum{}"),
+            [("\\",r"\textbackslash "),
+             ("<", r"\textless "),
+             (">", r"\textgreater "),
+             ("~", r"\texasciitilde "),
+             ("^", r"\textasciicircum "),
+             ("|", r"\docbooktolatexpipe "),
              ("&", r"\&"),
              ("#", r"\#"),
              ("_", r"\_"),
              ("$", r"\$"),
              ("%", r"\%"),
-             ("|", r"\docbooktolatexpipe{}"),
              ("{", r"\{"),
              ("}", r"\}")])

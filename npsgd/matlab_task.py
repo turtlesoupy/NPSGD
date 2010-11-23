@@ -2,11 +2,12 @@ import os
 import logging
 import subprocess
 from model_task import ModelTask
+from config import config
 
 class MatlabError(RuntimeError): pass
 class MatlabTask(ModelTask):
     abstractModel = "MatlabTask"
-    matlabPath    = "/usr/local/MATLAB/R2010b/bin/matlab"
+
     #Must specify matlab script
 
     def runModel(self):
@@ -17,7 +18,7 @@ class MatlabTask(ModelTask):
         io = "%s;\npath('%s', path);\n%s;\nexit;\n" % (paramCode, matlabBase, matlabFun)
 
         logging.info("Opening matlab with script:\n %s", io)
-        mProcess = subprocess.Popen([self.matlabPath, "-nodisplay"], stdin=subprocess.PIPE, cwd=self.workingDirectory)
+        mProcess = subprocess.Popen([config.matlabPath, "-nodisplay"], stdin=subprocess.PIPE, cwd=self.workingDirectory)
         mProcess.communicate(io)
         if mProcess.returncode != 0:
             raise MatlabError("Bad return code %s from matlab" % mProcess.returncode)

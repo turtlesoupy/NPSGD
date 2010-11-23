@@ -9,6 +9,7 @@
 %chlorophyllAConcentration
 %chlorophyllBConcentration
 %carotenoidConcentration
+%bifiacial
 
 path('/home/tdimson/public_html/npsg/matlab_plant', path);
 
@@ -21,7 +22,7 @@ sample.chlorophyllAConcentration = chlorophyllAConcentration;
 sample.chlorophyllBConcentration = chlorophyllBConcentration;
 sample.carotenoidConcentration   = carotenoidConcentration;
 sample.mesophyllFraction         = mesophyllPercentage / 100;
-sample.bifacial                  = 0;
+sample.bifacial                  = bifacial;
 
 for n=1:length(wavelengths)
     fprintf('Wavelength %d\n', wavelengths(n));
