@@ -4,7 +4,6 @@ import uuid
 import logging
 import subprocess
 from email_manager import Email
-from email_manager import email_manager_thread
 import shutil
 
 from config import config
@@ -20,9 +19,10 @@ class ModelTask(object):
     subtitle    = "Unspecified Subtitle"
     attachments = []
 
-    def __init__(self, emailAddress, taskId, modelParameters={}):
+    def __init__(self, emailAddress, taskId, modelParameters={}, failureCount=0):
         self.emailAddress      = emailAddress
         self.taskId            = taskId
+        self.failureCount      = failureCount
         self.modelParameters   = []
         self.workingDirectory  = "/var/tmp/npsgd/%s" % str(uuid.uuid4())
 
@@ -44,17 +44,20 @@ class ModelTask(object):
 
         return None
 
-
     @classmethod
     def fromDict(cls, dictionary):
         emailAddress = dictionary["emailAddress"]
         taskId       = dictionary["taskId"]
-        return cls(emailAddress, taskId, dictionary["modelParameters"])
+        failureCount = dictionary["failureCount"]
+
+        return cls(emailAddress, taskId, failureCount=failureCount,
+                modelParameters=dictionary["modelParameters"])
 
     def asDict(self):
         return {
             "emailAddress" :   self.emailAddress,
             "taskId":          self.taskId, 
+            "failureCount":    self.failureCount,
             "modelName":       self.__class__.short_name,
             "modelParameters": dict((p.name, p.asDict()) for p in self.modelParameters)
         }
@@ -115,23 +118,27 @@ class ModelTask(object):
         return pdf
 
 
-    def sendFailureEmail(self):
-        email_manager_thread.addEmail(Email(self.emailAddress, \
-                config.failureEmailSubject, config.failureEmailBodyTemplate.generate()))
+    def failureEmail(self):
+        return Email(self.emailAddress, 
+                config.failureEmailSubject,
+                config.failureEmailTemplate.generate())
 
-    def sendResultsEmail(self, attachments=[]):
-        logging.info("Add message to the email queue")
-        email_manager_thread.addEmail(Email(self.emailAddress, \
-                config.resultsEmailSubject, config.resultsEmailBodyTemplate.generate(), attachments))
+    def resultsEmail(self, attachments):
+        return Email(self.emailAddress,
+                config.resultsEmailSubject,
+                config.resultsEmailBodyTemplate.generate(),
+                attachments)
 
     def runModel(self):
         logging.warning("Called default run model - this should be overridden")
 
     def run(self):
+        """Runs the model with parameters, the model email object unsent."""
+
         logging.info("Running default task for '%s'", self.emailAddress)
         self.createWorkingDirectory()
         try:
             self.runModel()
-            self.sendResultsEmail(self.getAttachments())
+            return self.resultsEmail(self.getAttachments())
         finally:
             shutil.rmtree(self.workingDirectory)

@@ -7,10 +7,45 @@ from email.Utils import formatdate
 from email import Encoders
 from threading import Thread
 import logging
+import socket
 
 from config import config
 
-class EmailManager(Thread):
+class EmailSendError(RuntimeError): pass
+
+
+def blockingEmailSend(email):
+    try:
+        s = smtpServer()
+    except socket.gaierror, e:
+        raise EmailSendError("Unable to connect to smtp server")
+
+    try:
+        logging.info("Connected to SMTP server, sending email")
+        email.sendThrough(s)
+    finally:
+        s.close()
+
+email_manager_thread = None
+def backgroundEmailSend(email):
+    global email_manager_thread
+    if email_manager_thread == None:
+        email_manager_thread = EmailManagerThread()
+        email_manager_thread.start()
+
+    email_manager_thread.addEmail(email)
+
+def smtpServer():
+    smtpserver = smtplib.SMTP(config.smtpServer, config.smtpPort)
+    smtpserver.ehlo()
+    if config.smtpUseTLS:
+        smtpserver.starttls()
+    smtpserver.ehlo()
+    smtpserver.login(config.smtpUsername, config.smtpPassword)
+
+    return smtpserver
+
+class EmailManagerThread(Thread):
     def __init__(self):
         Thread.__init__(self)
         self.daemon = True
@@ -23,22 +58,7 @@ class EmailManager(Thread):
         while True:
             email = self.queue.get(True)
             logging.info("Email Manager: Found email in the queue, attempting to send")
-            s = self.smtpServer()
-            try:
-                logging.info("Email Manager: Connected to SMTP server")
-                email.sendThrough(s)
-            finally:
-                s.close()
-
-    def smtpServer(self):
-        smtpserver = smtplib.SMTP(config.smtpServer, config.smtpPort)
-        smtpserver.ehlo()
-        if config.smtpUseTLS:
-            smtpserver.starttls()
-        smtpserver.ehlo()
-        smtpserver.login(config.smtpUsername, config.smtpPassword)
-
-        return smtpserver
+            blockingEmailSend(email)
 
 class Email(object):
     def __init__(self, recipient, subject, body, binaryAttachments=[], textAttachments=[]):
@@ -68,9 +88,7 @@ class Email(object):
             part.add_header("Content-Disposition", "attachment; filename=%s" % name)
             msg.attach(part)
 
-        logging.info("Email Thread: constructed email object, sending")
+        logging.info("Email: constructed email object, sending")
         smtpServer.sendmail(config.fromAddress, [self.recipient] + config.cc, msg.as_string())
-        logging.info("Email Thread: sent")
+        logging.info("Email: sent")
 
-email_manager_thread = EmailManager()
-email_manager_thread.start()

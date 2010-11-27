@@ -1,8 +1,8 @@
 import os
 import sys
-import random
-import string
+import time
 import logging
+import threading
 import tornado.web
 import tornado.ioloop
 import tornado.escape
@@ -15,41 +15,61 @@ from npsgd import model_manager
 from npsgd import model_parameters
 from npsgd import ui_modules
 
+from npsgd.confirmation_map import ConfirmationMap
 from npsgd.model_manager import modelManager
 from npsgd.task_queue import TaskQueue
 from npsgd.task_queue import TaskQueueException
 from npsgd.model_task import ModelTask
 from npsgd.config import config
 
+
+class ExpireWorkerTaskThread(threading.Thread):
+    """Task Expiration Thread
+    
+    Moves tasks back into the queue whenever 
+    We haven't heard from a worker in a while
+    """
+
+    def __init__(self, taskQueue):
+        threading.Thread.__init__(self)
+        self.daemon = True
+        self.taskQueue = taskQueue
+        self.done = False
+
+    def run(self):
+        logging.info("Expire worker task thread booting up...")
+
+        while not self.done:
+            badTasks = self.taskQueue.pullProcessingTasksOlderThan(
+                    time.time() - config.keepAliveTimeout)
+
+            if len(badTasks) > 0:
+                logging.info("Found %d tasks to expire", len(badTasks))
+
+            for task in badTasks:
+                task.failureCount += 1
+                logging.warning("Task '%s' failed due to timeout (failure #%d)", task.taskId, task.failureCount)
+                if task.failureCount > config.maxJobFailures:
+                    logging.warning("Exceeded max job failures, sending fail email")
+                    npsgd.email_manager.backgroundEmailSend(task.failureEmail())
+                else:
+                    logging.warning("Inserting task back in to queue with new taskId")
+                    task.taskId = newTaskId()
+                    self.taskQueue.putTask(task)
+
+            time.sleep(config.keepAliveInterval)
+
+#Some globals
 idCounter    = 0
-failureCount = {}
+confirmationMap = ConfirmationMap()
+modelQueue      = TaskQueue()
+expireWorkerTaskThread = ExpireWorkerTaskThread(modelQueue)
 
-class ConfirmationMap(object):
-    class ConfirmationEntry(object):
-        def __init__(self, request):
-            self.timestamp = 10
-            self.request   = request
+def newTaskId():
+    global idCounter
+    idCounter += 1
 
-    def __init__(self):
-        self.codeToRequest = {}
-        self.codeLength = 16
-
-    def putRequest(self, request):
-        code = self.generateCode()
-        self.codeToRequest[code] = self.ConfirmationEntry(request)
-        return code
-
-    def getRequest(self, code):
-        if code in self.codeToRequest:
-            request = self.codeToRequest[code].request
-            del self.codeToRequest[code]
-            return request
-        else:
-            raise KeyError("Code does not exist")
-
-    def generateCode(self):
-        return "".join(random.choice(string.letters + string.digits)\
-                for i in xrange(self.codeLength))
+    return idCounter
 
 class ClientModelRequest(tornado.web.RequestHandler):
     def initialize(self, model):
@@ -64,19 +84,16 @@ class ClientModelRequest(tornado.web.RequestHandler):
 
         self.pushAndRender(task)
 
-
     def pushAndRender(self, task):
         code = confirmationMap.putRequest(task)
         emailAddress = task.emailAddress
         logging.info("Generated a request for %s, confirmation %s required", emailAddress, code)
         body = config.confirmEmailTemplate.generate(code=code)
         emailObject = Email(emailAddress, config.confirmEmailSubject, body, [], [("parameters.txt", task.textParameterTable())])
-        #email_manager_thread.addEmail(emailObject)
+        #npsgd.email_manager.backgroundEmailSend(emailObject)
         self.render(config.confirmTemplatePath, email=emailAddress, code=code)
 
     def setupModelTask(self):
-        global idCounter
-        idCounter += 1
         email = self.get_argument("email")
 
         paramDict = {}
@@ -85,7 +102,7 @@ class ClientModelRequest(tornado.web.RequestHandler):
             value = param.withValue(argVal)
             paramDict[param.name] = value.asDict()
 
-        task = self.model(email, idCounter, paramDict)
+        task = self.model(email, newTaskId(), paramDict)
         return task
 
 
@@ -102,7 +119,6 @@ class ClientConfirmRequest(tornado.web.RequestHandler):
 
         logging.info("Client confirmed request %s", confirmationCode)
         modelQueue.putTask(confirmedRequest)
-        failureCount[confirmedRequest.taskId] = 0
 
         self.render(config.confirmedTemplatePath)
             
@@ -112,9 +128,47 @@ class WorkerInfo(tornado.web.RequestHandler):
         self.write("{}")
 
 class WorkerTaskKeepAlive(tornado.web.RequestHandler):
-    def get(self, taskId):
+    def get(self, taskIdString):
+        taskId = int(taskIdString)
         logging.info("Got heartbeat for task id '%s'", taskId)
+        try:
+            task = modelQueue.touchProcessingTaskById(taskId)
+        except TaskQueueException, e:
+            logging.info("Bad keep alive request: no such task id '%s' exists" % taskId)
+            self.write(tornado.escape.json_encode({
+                "error": {"type" : "bad_id" }
+            }))
+
         self.write("{}")
+
+class WorkerSucceededTask(tornado.web.RequestHandler):
+    def get(self, taskIdString):
+        taskId = int(taskIdString)
+        try:
+            task = modelQueue.pullProcessingTaskById(taskId)
+        except TaskQueueException, e:
+            logging.info("Bad succeed request: no task id exists")
+            self.write(tornado.escape.json_encode({
+                "error": {"type" : "bad_id" }
+            }))
+            return
+
+        self.write(tornado.escape.json_encode({
+            "status": "okay"
+        }))
+
+class WorkerHasTask(tornado.web.RequestHandler):
+    def get(self, taskIdString):
+        taskId = int(taskIdString)
+        logging.info("Got 'has task' request for task of id '%d'", taskId)
+        if modelQueue.hasProcessingTaskById(taskId):
+            self.write(tornado.escape.json_encode({
+                "response": "yes"
+            }))
+        else:
+            self.write(tornado.escape.json_encode({
+                "response": "no"
+            }))
 
 class WorkerFailedTask(tornado.web.RequestHandler):
     def get(self, taskIdString):
@@ -124,20 +178,21 @@ class WorkerFailedTask(tornado.web.RequestHandler):
         except TaskQueueException, e:
             logging.info("Bad failed request: no such task id exists, ignoring request")
             self.write(tornado.escape.json_encode({
-                "error": "No task by that id is found"
+                "error": {"type" : "bad_id" }
             }))
             return
 
-        failureCount[task.taskId] += 1
+        task.failureCount += 1
         logging.warning("Worker had a failure while processing task '%s' (failure #%d)",\
-                task.taskId, failureCount[task.taskId])
+                task.taskId, task.failureCount)
 
-        if failureCount[task.taskId] >= config.maxJobFailures:
+        if task.failureCount >= config.maxJobFailures:
             logging.warning("Max job failures found, sending failure email")
-            task.sendFailureEmail()
+            npsgd.email_manager.backgroundEmailSend(task.failureEmail())
         else:
             logging.warning("Returning task to queue for another attempt")
             modelQueue.putTask(task)
+
         self.write(tornado.escape.json_encode({
             "status": "okay"
         }))
@@ -156,8 +211,6 @@ class WorkerTaskRequest(tornado.web.RequestHandler):
                 "task": task.asDict()
             }))
 
-modelQueue      = TaskQueue()
-confirmationMap = ConfirmationMap()
 
 def setupClientApplication():
     appList = [ 
@@ -179,6 +232,8 @@ def setupWorkerApplication():
     return tornado.web.Application([
         (r"/info", WorkerInfo),
         (r"/failed_task/(\d+)", WorkerFailedTask),
+        (r"/succeed_task/(\d+)", WorkerSucceededTask),
+        (r"/has_task/(\d+)",     WorkerHasTask),
         (r"/keep_alive_task/(\d+)", WorkerTaskKeepAlive),
         (r"/work_task", WorkerTaskRequest)
     ])
@@ -206,6 +261,7 @@ def main():
     print >>sys.stderr, "NPSGD web server running on port %d" % options.client_port
     print >>sys.stderr, "NPSGD worker server running on port %d" % options.worker_port
 
+    expireWorkerTaskThread.start()
     tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == "__main__":

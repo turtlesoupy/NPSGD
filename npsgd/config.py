@@ -28,6 +28,8 @@ class Config(object):
         self.resultsEmailSubject      = config.get("npsgd", "resultsEmailSubject")
         self.failureEmailSubject      = config.get("npsgd", "failureEmailSubject")
         self.maxJobFailures           = config.getint("npsgd", "maxJobFailures")
+        self.keepAliveInterval        = config.getint("npsgd", "keepAliveInterval")
+        self.keepAliveTimeout         = config.getint("npsgd", "keepAliveTimeout")
 
         if not os.path.exists(self.resultsEmailBodyPath):
             raise ConfigError("Results email body does not exist")

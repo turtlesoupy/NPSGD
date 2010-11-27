@@ -4,45 +4,54 @@ import time
 import json
 import logging
 import urllib2
+from threading import Thread
 from optparse import OptionParser
 
-from npsgd import config
 from npsgd import model_manager
-from npsgd.model_manager import modelManager
-from npsgd.model_task import ModelTask
 from npsgd.config import config
-from threading import Thread
+from npsgd.model_task import ModelTask
+from npsgd.model_manager import modelManager
+import npsgd.email_manager
 
 class TaskKeepAliveThread(Thread):
+    """Model keep alive thread.
+
+    Periodically sends a keepalive (heartbeat) to the server while we are working
+    on a model task so that it doesn't expire our task id. 
+    """
+
     def __init__(self, keepAliveRequest, taskId):
         Thread.__init__(self)
-
-        self.pause            = 30
-        self.maxFails         = 10
         self.done             = False
         self.keepAliveRequest = keepAliveRequest
         self.taskId           = taskId
         self.daemon           = True
 
+
     def run(self):
         fails = 0
-        while not self.done and fails < self.maxFails:
+        while not self.done:
             try:
                 logging.info("Making heartbeat request '%s'", self.keepAliveRequest)
                 response = urllib2.urlopen("%s/%s" % (self.keepAliveRequest, self.taskId))
             except urllib2.URLError, e:
-                logging.error("Failed to make initial connection to %s", self.keepAliveRequest)
+                logging.error("Heartbeat failed to make connection to %s", self.keepAliveRequest)
                 fails += 1
 
-            time.sleep(self.pause)
+            time.sleep(config.keepAliveInterval)
 
 
 class NPSGDWorker(object):
+    """Worker class for executing models and sending out result emails.
+
+    """
     def __init__(self, serverAddress, serverPort):
         self.baseRequest          = "http://%s:%s" % (serverAddress, serverPort)
         self.infoRequest          = "%s/info"      % self.baseRequest
         self.taskRequest          = "%s/work_task" % self.baseRequest
         self.failedTaskRequest    = "%s/failed_task" % self.baseRequest
+        self.hasTaskRequest       = "%s/has_task" % self.baseRequest
+        self.succeedTaskRequest    = "%s/succeed_task" % self.baseRequest
         self.taskKeepAliveRequest = "%s/keep_alive_task" % self.baseRequest
         self.requestTimeout  = 100
         self.supportedModels = ["test"]
@@ -104,34 +113,76 @@ class NPSGDWorker(object):
             logging.error("Failed to communicate failed task to server %s", self.baseRequest)
             self.responseError()
 
+    def notifySucceedTask(self, taskId):
+        try:
+            logging.info("Notifying server of succeeded task with id %s", taskId)
+            response = urllib2.urlopen("%s/%s" % (self.succeedTaskRequest, taskId))
+        except urllib2.URLError, e:
+            logging.error("Failed to communicate succeeded task to server %s", self.baseRequest)
+            self.responseError()
+
+    def serverHasTask(self, taskId):
+        try:
+            logging.info("Making has task request for %s", taskId)
+            response = urllib2.urlopen("%s/%s" % (self.hasTaskRequest, taskId))
+        except urllib2.URLError, e:
+            logging.error("Failed to make has task request to server %s", self.baseRequest)
+            self.responseError()
+            raise RuntimeError(e)
+
+        try:
+            decodedResponse = json.load(response)
+        except ValueError, e:
+            logging.error("Bad response from server for has task")
+            raise RuntimeError(e)
+        
+        if "response" in decodedResponse and decodedResponse["response"] in ["yes", "no"]:
+            return decodedResponse["response"] == "yes"
+        else:
+            logging.error("Malformed response from server")
+            raise RuntimeError("Malformed response from server for 'has task'")
+        
+
     def processTask(self, taskDict):
-        try:
-            model = modelManager.getModel(taskDict["modelName"])
-            logging.info("Creating a model task for '%s'", taskDict["modelName"])
-            taskObject = model.fromDict(taskDict)
-        except KeyError, e:
-            logging.warning("Was unable to deserialize model task")
-
-            if "taskId" in taskDict:
-                self.notifyFailedTask(taskDict["taskId"])
-
-            return
-
-        keepAliveThread = TaskKeepAliveThread(self.taskKeepAliveRequest, taskObject.taskId)
-        keepAliveThread.start()
+        taskId = None
+        if "taskId" in taskDict:
+            taskId = taskDict["taskId"]
 
         try:
-            taskObject.run()
-            keepAliveThread.done = True
-            keepAliveThread.join()
-        except RuntimeError, e:
-            keepAliveThread.done = True
+            try:
+                model = modelManager.getModel(taskDict["modelName"])
+                logging.info("Creating a model task for '%s'", taskDict["modelName"])
+                taskObject = model.fromDict(taskDict)
+            except KeyError, e:
+                logging.warning("Was unable to deserialize model task")
+                if taskId:
+                    self.notifyFailedTask(taskId)
+                return
 
-            logging.error("Some kind of error during processing model task, failing")
-            logging.exception(e)
-            self.notifyFailedTask(taskObject.taskId)
+            keepAliveThread = TaskKeepAliveThread(self.taskKeepAliveRequest, taskObject.taskId)
+            keepAliveThread.start()
+            try:
+                resultsEmail = taskObject.run()
+                logging.info("Model finished running, sending email")
+                if self.serverHasTask(taskObject.taskId):
+                    npsgd.email_manager.blockingEmailSend(resultsEmail)
+                    logging.info("Email sent, model is 100% complete!")
+                    self.notifySucceedTask(taskObject.taskId)
+                else:
+                    logging.warning("Skipping task completion since the server forgot about our task")
 
-            keepAliveThread.join()
+                keepAliveThread.done = True
+
+            except RuntimeError, e:
+                keepAliveThread.done = True
+                logging.error("Some kind of error during processing model task, notifying server of failure")
+                logging.exception(e)
+                self.notifyFailedTask(taskObject.taskId)
+
+        except: #If all else fails, notify the server that we are going down
+            if taskId:
+                self.notifyFailedTask(taskId)
+            raise
 
 def main():
     parser = OptionParser()
