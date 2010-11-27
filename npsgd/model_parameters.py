@@ -54,6 +54,9 @@ class StringParameter(ModelParameter):
     def asMatlabCode(self):
         return "%s='%s';" % (self.name, matlabEscape(self.value))
 
+    def asTextRow(self):
+        return "%s, %s, %s, %s" % (self.name, self.description, self.value, self.units)
+
     def asLatexRow(self):
         return "%s & %s & %s %s" % (self.name, self.description, latexEscape(self.value), latexEscape(self.units))
 
@@ -103,6 +106,9 @@ class RangeParameter(ModelParameter):
     def asMatlabCode(self):
         start, end = self.value
         return "%sStart=%s;\n%sEnd=%s;\n%s=%s:%s:%s;" % (self.name, start, self.name, end, self.name, start, self.step, end)
+
+    def asTextRow(self):
+        return "%s, %s, %s-%s, %s" % (self.name, self.description, self.value[0], self.value[1], self.units)
 
     def asLatexRow(self):
         return "%s & %s & %s-%s %s" % (latexEscape(self.name), latexEscape(self.description), self.value[0], self.value[1], latexEscape(self.units))
@@ -166,6 +172,9 @@ class FloatParameter(ModelParameter):
 
     def asMatlabCode(self):
         return "%s=%s;" % (self.name, self.value)
+
+    def asTextRow(self):
+        return "%s, %s, %s, %s" % (self.name, self.description, self.value, self.units)
 
     def asLatexRow(self):
         return "%s & %s & %s %s" % (latexEscape(self.name), latexEscape(self.description), self.value, latexEscape(self.units))

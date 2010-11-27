@@ -13,6 +13,7 @@ from config import config
 class EmailManager(Thread):
     def __init__(self):
         Thread.__init__(self)
+        self.daemon = True
         self.queue = Queue.Queue()
 
     def addEmail(self, email):
@@ -21,9 +22,10 @@ class EmailManager(Thread):
     def run(self):
         while True:
             email = self.queue.get(True)
-            logging.info("Found email in the queue, attempting to send")
+            logging.info("Email Manager: Found email in the queue, attempting to send")
             s = self.smtpServer()
             try:
+                logging.info("Email Manager: Connected to SMTP server")
                 email.sendThrough(s)
             finally:
                 s.close()
@@ -39,11 +41,12 @@ class EmailManager(Thread):
         return smtpserver
 
 class Email(object):
-    def __init__(self, recipient, subject, body, binaryAttachments=[]):
+    def __init__(self, recipient, subject, body, binaryAttachments=[], textAttachments=[]):
         self.recipient         = recipient
         self.subject           = subject
         self.body              = body
         self.binaryAttachments = binaryAttachments
+        self.textAttachments   = textAttachments
 
     def sendThrough(self, smtpServer):
         msg = MIMEMultipart()
@@ -53,6 +56,11 @@ class Email(object):
 
         msg.attach(MIMEText(self.body, 'plain', 'UTF-8'))
 
+        for (name, attach) in self.textAttachments:
+            part = MIMEText(attach, 'plain', 'UTF-8')
+            part.add_header("Content-Disposition", "attachment; filename=%s" % name)
+            msg.attach(part)
+
         for (name, attach) in self.binaryAttachments:
             part = MIMEBase('application', "octet-stream")
             part.set_payload(attach)
@@ -60,7 +68,9 @@ class Email(object):
             part.add_header("Content-Disposition", "attachment; filename=%s" % name)
             msg.attach(part)
 
+        logging.info("Email Thread: constructed email object, sending")
         smtpServer.sendmail(config.fromAddress, [self.recipient] + config.cc, msg.as_string())
+        logging.info("Email Thread: sent")
 
 email_manager_thread = EmailManager()
 email_manager_thread.start()

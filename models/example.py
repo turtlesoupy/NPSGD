@@ -21,6 +21,7 @@ class ExampleModel(MatlabTask):
             \begin{figure}
             \caption{A nice looking function}
             \includegraphics[width=5in]{test_figure}
+            \includegraphics[width=5in]{test_figure2222}
             \end{figure}
 
             \newpage\appendix\section{Parameter List}

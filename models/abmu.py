@@ -30,6 +30,12 @@ class ABMU(MatlabTask):
                 default=0.79866, units="kg/m^3"),
             FloatParameter('carotenoidConcentration', description="Carotenoid Concentration",
                 default=0.658895, units="kg/m^3"),
+            FloatParameter('cuticleUndulationsRatio', description="Cuticle Undulations Aspect Ratio",
+                default=5.0, rangeStart=1.0, rangeEnd=50.0, step=0.5),
+            FloatParameter('epidermisCellCapsRatio', description="Epidermis Cell Caps Aspect Ratio",
+                default=5.0, rangeStart=1.0, rangeEnd=50.0, step=0.5),
+            FloatParameter('spongyCellCapsAspectRatio', description="Spongy Cell Caps Aspect Ratio",
+                default=5.0, rangeStart=1.0, rangeEnd=50.0, step=0.5),
             IntegerParameter('bifacial', description="Hidden bifacial parameter", default=0, hidden=True)
     ]
 

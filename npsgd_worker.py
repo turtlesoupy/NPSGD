@@ -11,12 +11,39 @@ from npsgd import model_manager
 from npsgd.model_manager import modelManager
 from npsgd.model_task import ModelTask
 from npsgd.config import config
+from threading import Thread
+
+class TaskKeepAliveThread(Thread):
+    def __init__(self, keepAliveRequest, taskId):
+        Thread.__init__(self)
+
+        self.pause            = 30
+        self.maxFails         = 10
+        self.done             = False
+        self.keepAliveRequest = keepAliveRequest
+        self.taskId           = taskId
+        self.daemon           = True
+
+    def run(self):
+        fails = 0
+        while not self.done and fails < self.maxFails:
+            try:
+                logging.info("Making heartbeat request '%s'", self.keepAliveRequest)
+                response = urllib2.urlopen("%s/%s" % (self.keepAliveRequest, self.taskId))
+            except urllib2.URLError, e:
+                logging.error("Failed to make initial connection to %s", self.keepAliveRequest)
+                fails += 1
+
+            time.sleep(self.pause)
+
 
 class NPSGDWorker(object):
     def __init__(self, serverAddress, serverPort):
-        self.baseRequest     = "http://%s:%s" % (serverAddress, serverPort)
-        self.infoRequest     = "%s/info"      % self.baseRequest
-        self.taskRequest     = "%s/work_task" % self.baseRequest
+        self.baseRequest          = "http://%s:%s" % (serverAddress, serverPort)
+        self.infoRequest          = "%s/info"      % self.baseRequest
+        self.taskRequest          = "%s/work_task" % self.baseRequest
+        self.failedTaskRequest    = "%s/failed_task" % self.baseRequest
+        self.taskKeepAliveRequest = "%s/keep_alive_task" % self.baseRequest
         self.requestTimeout  = 100
         self.supportedModels = ["test"]
         self.requestErrors   = 0
@@ -69,6 +96,14 @@ class NPSGDWorker(object):
         elif "task" in response:
             self.processTask(response["task"])
 
+    def notifyFailedTask(self, taskId):
+        try:
+            logging.info("Notifying server of failed task with id %s", taskId)
+            response = urllib2.urlopen("%s/%s" % (self.failedTaskRequest, taskId))
+        except urllib2.URLError, e:
+            logging.error("Failed to communicate failed task to server %s", self.baseRequest)
+            self.responseError()
+
     def processTask(self, taskDict):
         try:
             model = modelManager.getModel(taskDict["modelName"])
@@ -76,9 +111,27 @@ class NPSGDWorker(object):
             taskObject = model.fromDict(taskDict)
         except KeyError, e:
             logging.warning("Was unable to deserialize model task")
+
+            if "taskId" in taskDict:
+                self.notifyFailedTask(taskDict["taskId"])
+
             return
 
-        taskObject.run()
+        keepAliveThread = TaskKeepAliveThread(self.taskKeepAliveRequest, taskObject.taskId)
+        keepAliveThread.start()
+
+        try:
+            taskObject.run()
+            keepAliveThread.done = True
+            keepAliveThread.join()
+        except RuntimeError, e:
+            keepAliveThread.done = True
+
+            logging.error("Some kind of error during processing model task, failing")
+            logging.exception(e)
+            self.notifyFailedTask(taskObject.taskId)
+
+            keepAliveThread.join()
 
 def main():
     parser = OptionParser()

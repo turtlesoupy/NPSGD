@@ -3,7 +3,8 @@ import sys
 import uuid
 import logging
 import subprocess
-import email_manager
+from email_manager import Email
+from email_manager import email_manager_thread
 import shutil
 
 from config import config
@@ -19,8 +20,9 @@ class ModelTask(object):
     subtitle    = "Unspecified Subtitle"
     attachments = []
 
-    def __init__(self, emailAddress, modelParameters={}):
+    def __init__(self, emailAddress, taskId, modelParameters={}):
         self.emailAddress      = emailAddress
+        self.taskId            = taskId
         self.modelParameters   = []
         self.workingDirectory  = "/var/tmp/npsgd/%s" % str(uuid.uuid4())
 
@@ -46,12 +48,14 @@ class ModelTask(object):
     @classmethod
     def fromDict(cls, dictionary):
         emailAddress = dictionary["emailAddress"]
-        return cls(emailAddress, dictionary["modelParameters"])
+        taskId       = dictionary["taskId"]
+        return cls(emailAddress, taskId, dictionary["modelParameters"])
 
     def asDict(self):
         return {
             "emailAddress" :   self.emailAddress,
-            "modelName": self.__class__.short_name,
+            "taskId":          self.taskId, 
+            "modelName":       self.__class__.short_name,
             "modelParameters": dict((p.name, p.asDict()) for p in self.modelParameters)
         }
 
@@ -68,6 +72,9 @@ class ModelTask(object):
         %s
         \\end{tabular*}
         \\end{centering}""" % paramRows
+
+    def textParameterTable(self):
+        return "Model:%s\nName, Description, Value, Units\n%s" % (self.__class__.short_name, "\n".join(p.asTextRow() for p in self.modelParameters))
 
     def emailBody(self):
         return "Model run results from NPSG"
@@ -107,10 +114,15 @@ class ModelTask(object):
 
         return pdf
 
+
+    def sendFailureEmail(self):
+        email_manager_thread.addEmail(Email(self.emailAddress, \
+                config.failureEmailSubject, config.failureEmailBodyTemplate.generate()))
+
     def sendResultsEmail(self, attachments=[]):
-        logging.info("Sending results email")
-        email_manager.sendMessage(self.emailAddress, config.resultsEmailBodyTemplate.generate())
-        logging.info("Sent!")
+        logging.info("Add message to the email queue")
+        email_manager_thread.addEmail(Email(self.emailAddress, \
+                config.resultsEmailSubject, config.resultsEmailBodyTemplate.generate(), attachments))
 
     def runModel(self):
         logging.warning("Called default run model - this should be overridden")

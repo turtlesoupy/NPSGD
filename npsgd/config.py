@@ -19,11 +19,15 @@ class Config(object):
         self.pdfLatexPath   = config.get('Latex',  'pdfLatexPath')
         self.resultsEmailBodyPath     = config.get("npsgd", "resultsEmailBodyPath")
         self.confirmEmailTemplatePath = config.get("npsgd", "confirmEmailTemplatePath")
+        self.failureEmailTemplatePath = config.get("npsgd", "failureEmailTemplatePath")
         self.confirmEmailSubject      = config.get("npsgd", "confirmEmailSubject")
         self.latexResultTemplatePath  = config.get('Latex', 'resultTemplate')
         self.modelTemplatePath        = config.get('npsgd', 'modelTemplatePath')
         self.confirmTemplatePath      = config.get('npsgd', 'confirmTemplatePath')
         self.confirmedTemplatePath    = config.get('npsgd', 'confirmedTemplatePath')
+        self.resultsEmailSubject      = config.get("npsgd", "resultsEmailSubject")
+        self.failureEmailSubject      = config.get("npsgd", "failureEmailSubject")
+        self.maxJobFailures           = config.getint("npsgd", "maxJobFailures")
 
         if not os.path.exists(self.resultsEmailBodyPath):
             raise ConfigError("Results email body does not exist")
@@ -34,6 +38,9 @@ class Config(object):
         if not os.path.exists(self.confirmEmailTemplatePath):
             raise ConfigError("Confirm email template '%s' is missing" % self.confirmEmailTemplatePath)
 
+        if not os.path.exists(self.failureEmailTemplatePath):
+            raise ConfigError("Failure email template '%s' is missing" % self.failureEmailTemplatePath)
+
         if not os.path.exists(self.modelTemplatePath):
             raise ConfigError("Model template '%s' is missing" % self.modelTemplatePath)
 
@@ -43,6 +50,7 @@ class Config(object):
         if not os.path.exists(self.confirmedTemplatePath):
             raise ConfigError("Confirmed template '%s' is missing" % self.confirmedTemplatePath)
 
+
         with open(self.resultsEmailBodyPath, 'r') as f:
             self.resultsEmailBodyTemplate = tornado.template.Template(f.read())
 
@@ -51,6 +59,9 @@ class Config(object):
 
         with open(self.confirmEmailTemplatePath, 'r') as f:
             self.confirmEmailTemplate = tornado.template.Template(f.read())
+
+        with open(self.failureEmailTemplatePath, 'r') as f:
+            self.failureEmailTemplate = tornado.template.Template(f.read())
 
         self.loadEmail(config)
         self.checkIntegrity()
