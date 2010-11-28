@@ -11,10 +11,10 @@ I don't recommend using it except to play around with. Documentation is
 non-existent for a while.
 
 If you are brave enough, here's how it works:
-    - You create a models/whatever.py. See "example.py". This amounts
+    - You create models/whatever.py. See "example.py". This amounts
       to you specifying parameters and outputs as well as a LaTeX way of
       displaying them.
-    - Visit "http://your-server:8000/models/whatever"  the model will be 
+    - Visit http://your-server:8000/models/whatever.  The model will be 
       automatically converted to a web page as requests come in. Specify your
       email, confirm the request and your model will run on worker machines.
     - The output graphs, LaTeX files, etc. will all be shipped as attachments
