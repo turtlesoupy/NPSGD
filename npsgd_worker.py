@@ -4,7 +4,7 @@ import time
 import json
 import logging
 import urllib2
-from threading import Thread
+from threading import Thread, Event
 from optparse import OptionParser
 
 from npsgd import model_manager
@@ -22,7 +22,7 @@ class TaskKeepAliveThread(Thread):
 
     def __init__(self, keepAliveRequest, taskId):
         Thread.__init__(self)
-        self.done             = False
+        self.done             = Event()
         self.keepAliveRequest = keepAliveRequest
         self.taskId           = taskId
         self.daemon           = True
@@ -30,15 +30,13 @@ class TaskKeepAliveThread(Thread):
 
     def run(self):
         fails = 0
-        while not self.done:
+        while not self.done.wait(config.keepAliveInterval).isSet():
             try:
                 logging.info("Making heartbeat request '%s'", self.keepAliveRequest)
                 response = urllib2.urlopen("%s/%s" % (self.keepAliveRequest, self.taskId))
             except urllib2.URLError, e:
                 logging.error("Heartbeat failed to make connection to %s", self.keepAliveRequest)
                 fails += 1
-
-            time.sleep(config.keepAliveInterval)
 
 
 class NPSGDWorker(object):
@@ -47,12 +45,12 @@ class NPSGDWorker(object):
     """
     def __init__(self, serverAddress, serverPort):
         self.baseRequest          = "http://%s:%s" % (serverAddress, serverPort)
-        self.infoRequest          = "%s/info"      % self.baseRequest
-        self.taskRequest          = "%s/work_task" % self.baseRequest
-        self.failedTaskRequest    = "%s/failed_task" % self.baseRequest
-        self.hasTaskRequest       = "%s/has_task" % self.baseRequest
-        self.succeedTaskRequest    = "%s/succeed_task" % self.baseRequest
-        self.taskKeepAliveRequest = "%s/keep_alive_task" % self.baseRequest
+        self.infoRequest          = "%s/worker_info"      % self.baseRequest
+        self.taskRequest          = "%s/worker_work_task" % self.baseRequest
+        self.failedTaskRequest    = "%s/worker_failed_task" % self.baseRequest
+        self.hasTaskRequest       = "%s/worker_has_task" % self.baseRequest
+        self.succeedTaskRequest    = "%s/worker_succeed_task" % self.baseRequest
+        self.taskKeepAliveRequest = "%s/worker_keep_alive_task" % self.baseRequest
         self.requestTimeout  = 100
         self.supportedModels = ["test"]
         self.requestErrors   = 0
@@ -171,13 +169,13 @@ class NPSGDWorker(object):
                 else:
                     logging.warning("Skipping task completion since the server forgot about our task")
 
-                keepAliveThread.done = True
-
             except RuntimeError, e:
-                keepAliveThread.done = True
                 logging.error("Some kind of error during processing model task, notifying server of failure")
                 logging.exception(e)
                 self.notifyFailedTask(taskObject.taskId)
+
+            finally:
+                keepAliveThread.done.set()
 
         except: #If all else fails, notify the server that we are going down
             if taskId:
@@ -186,10 +184,6 @@ class NPSGDWorker(object):
 
 def main():
     parser = OptionParser()
-    parser.add_option('-a', '--server-address', dest="server_address",
-            help="Server address (default 127.0.0.1)", type="string", default="127.0.0.1")
-    parser.add_option('-p', '--server-port', dest="server_port",
-            help="Server port (default 8001)", type="int", default="8001")
     parser.add_option('-c', '--config', dest="config",
             help="Configuration file path", type="string", default="config.cfg")
 
@@ -200,7 +194,7 @@ def main():
     model_manager.setupModels()
 
 
-    worker = NPSGDWorker(options.server_address, options.server_port)
+    worker = NPSGDWorker(config.queueServerAddress, config.queueServerPort)
     worker.loop()
 
 if __name__ == "__main__":
