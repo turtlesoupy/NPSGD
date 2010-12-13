@@ -1,0 +1,9 @@
+Hello,
+
+Someone from this email address recently submitted a message using the NPSG online
+model tool. We need confirmation in order for you to proceed:
+
+Visit http://192.168.245.110/models/confirm.php?code={{code}} to start your job.
+
+Natural Phenomenon Simulation Group
+University of Waterloo

@@ -24,6 +24,9 @@ class ClientModelRequest(tornado.web.RequestHandler):
     def initialize(self, model):
         self.model = model
 
+    def get(self):
+        self.render(config.modelTemplatePath, model=self.model, errorText=None)
+
     @tornado.web.asynchronous
     def post(self):
         try:

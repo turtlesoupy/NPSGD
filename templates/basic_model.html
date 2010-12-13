@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+{% if errorText != None %}
+<div class="error">
+    Error: {{ escape(errorText) }}
+</div>
+{% end %}
+
+<form id="modelSubmit" method="post">
+    Enter your email address: <input type="text" name="email">
+    <h4>Model Parameters</h4>
+    <table>
+        <tr>
+            <th>Parameter</th><th>Value</th>
+        </tr>
+
+        {% for parameter in model.parameters %}
+            {{modules.ParameterRenderer(parameter)}} 
+        {% end %}
+    </table>
+
+    <input type="submit">
+</form>
+{% end %}

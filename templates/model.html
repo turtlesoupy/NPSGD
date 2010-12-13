@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="modelTitle"> {{model.full_name}} </h1>
+<h2 class="modelSubtitle"> {{model.subtitle}} </h2>
+
+<div class="modelContent">
+{% if errorText != None %}
+    <div class="error">
+        Error: {{ escape(errorText) }}
+    </div>
+{% end %}
+
+<form id="modelSubmit" method="post">
+    Enter your email address: <input type="text" name="email">
+    <h4>Model Parameters</h4>
+    <table>
+        <tr>
+            <th>Parameter</th><th>Value</th>
+        </tr>
+
+        {% for parameter in model.parameters %}
+            {{modules.ParameterRenderer(parameter)}} 
+        {% end %}
+    </table>
+
+    <input type="submit">
+</form>
+</div>
+<div class="finePrint">
+    Created with <a href="https://github.com/cosbynator/NPSGD">NPSGD</a>
+</div>
+{% end %}
+
