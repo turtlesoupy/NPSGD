@@ -10,6 +10,11 @@ class Config(object):
     def __init__(self):
         pass
 
+    def setupLogging(self, logName):
+        logFilename = os.path.join(config.loggingDirectory, logName)
+        logging.basicConfig(filename=os.path.join(config.loggingDirectory, logName),\
+                            level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+
     def loadConfig(self, configPath):
         config = ConfigParser.SafeConfigParser()
         config.read(configPath)
@@ -32,40 +37,26 @@ class Config(object):
         self.keepAliveTimeout         = config.getint("npsgd", "keepAliveTimeout")
         self.queueServerAddress       = config.get("npsgd", "queueServerAddress")
         self.queueServerPort          = config.getint("npsgd", "queueServerPort")
-
-        if not os.path.exists(self.resultsEmailBodyPath):
-            raise ConfigError("Results email body does not exist")
-
-        if not os.path.exists(self.latexResultTemplatePath):
-            raise ConfigError("Latex result template file does not exist")
-
-        if not os.path.exists(self.confirmEmailTemplatePath):
-            raise ConfigError("Confirm email template '%s' is missing" % self.confirmEmailTemplatePath)
-
-        if not os.path.exists(self.failureEmailTemplatePath):
-            raise ConfigError("Failure email template '%s' is missing" % self.failureEmailTemplatePath)
-
-        if not os.path.exists(self.modelTemplatePath):
-            raise ConfigError("Model template '%s' is missing" % self.modelTemplatePath)
-
-        if not os.path.exists(self.confirmTemplatePath):
-            raise ConfigError("Confirm template '%s' is missing" % self.confirmTemplatePath)
-
-        if not os.path.exists(self.confirmedTemplatePath):
-            raise ConfigError("Confirmed template '%s' is missing" % self.confirmedTemplatePath)
+        self.loggingDirectory         = config.get("npsgd", "loggingDirectory")
+        self.modelDirectory           = config.get("npsgd", "modelDirectory")
+        self.templateDirectory        = config.get("npsgd", "templateDirectory")
 
 
-        with open(self.resultsEmailBodyPath, 'r') as f:
-            self.resultsEmailBodyTemplate = tornado.template.Template(f.read())
+        if not os.path.exists(self.templateDirectory):
+            raise ConfigError("Template directory '%s' does not exist" % self.templateDirectory)
 
-        with open(self.latexResultTemplatePath, 'r') as f:
-            self.latexResultTemplate = tornado.template.Template(f.read())
+        if not os.path.exists(self.loggingDirectory):
+            raise ConfigError("Logging directory '%s' does not exist" % self.loggingDirectory)
 
-        with open(self.confirmEmailTemplatePath, 'r') as f:
-            self.confirmEmailTemplate = tornado.template.Template(f.read())
+        if not os.path.exists(self.modelDirectory):
+            raise ConfigError("Model directory '%s' does not exist" % self.modelDirectory)
 
-        with open(self.failureEmailTemplatePath, 'r') as f:
-            self.failureEmailTemplate = tornado.template.Template(f.read())
+
+        tLoader = tornado.template.Loader(self.templateDirectory)
+        self.resultsEmailBodyTemplate = tLoader.load(self.resultsEmailBodyPath)
+        self.latexResultTemplate      = tLoader.load(self.latexResultTemplatePath)
+        self.confirmEmailTemplate     = tLoader.load(self.confirmEmailTemplatePath)
+        self.failureEmailTemplate     = tLoader.load(self.failureEmailTemplatePath)
 
         self.loadEmail(config)
         self.checkIntegrity()
@@ -77,7 +68,6 @@ class Config(object):
         self.smtpPort     = config.getint("email", "smtpPort")
         self.smtpUseTLS   = config.getboolean("email", "smtpUseTLS")
         self.fromAddress  = config.get("email", "fromAddress")
-        self.cc           = config.get("email", "cc").split(",")
 
 
     def checkIntegrity(self):

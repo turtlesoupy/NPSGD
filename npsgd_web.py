@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import os
 import sys
 import time
@@ -117,7 +118,8 @@ def setupClientApplication():
 
     settings = {
         "static_path": os.path.join(os.path.dirname(__file__), "static"),
-        "ui_modules": ui_modules
+        "ui_modules": ui_modules,
+        "template_path": config.templateDirectory
     }
 
     return tornado.web.Application(appList, **settings)
@@ -129,15 +131,19 @@ def main():
                         help="Config file", default="config.cfg")
     parser.add_option('-p', '--client-port', dest='port',
                         help="Http port (for serving html)", default=8000, type="int")
+    parser.add_option('-l', '--log-filename', dest='log',
+                        help="Log filename (appended to logging directory)", default="npsgd_web.log")
 
     (options, args) = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG)
     config.loadConfig(options.config)
+    config.setupLogging(options.log)
     model_manager.setupModels()
+
     clientHTTP = tornado.httpserver.HTTPServer(setupClientApplication())
     clientHTTP.listen(options.port)
 
+    logging.info("NPSGD Web Booted up, serving on port %d", options.port)
     print >>sys.stderr, "NPSGD web server running on port %d" % options.port
 
     tornado.ioloop.IOLoop.instance().start()

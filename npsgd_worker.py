@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import os
 import sys
 import time
@@ -191,14 +192,17 @@ def main():
     parser.add_option('-c', '--config', dest="config",
             help="Configuration file path", type="string", default="config.cfg")
 
+    parser.add_option('-l', '--log-filename', dest='log',
+                        help="Log filename (appended to logging directory)", default="npsgd_worker.log")
+
     (options, args) = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG)
     config.loadConfig(options.config)
+    config.setupLogging(options.log)
     model_manager.setupModels()
 
-
     worker = NPSGDWorker(config.queueServerAddress, config.queueServerPort)
+    logging.info("NPSGD Worker booted up, going into event loop")
     worker.loop()
 
 if __name__ == "__main__":

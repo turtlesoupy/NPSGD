@@ -2,6 +2,7 @@ import os
 import sys
 import glob
 import logging
+from npsgd.config import config
 
 #See Marty Alchin's "A Simple Plugin Framework"
 class ModelMount(type):
@@ -34,12 +35,10 @@ class ModelManager(object):
 
 def setupModels():
     """Attempts to do the initial load of all models. Must be called on script startup"""
-
-    model_path = "models/"
-    sys.path.append(model_path)
+    sys.path.append(config.modelDirectory)
     try:
         sys.dont_write_bytecode = True
-        for pyfile in glob.glob("%s/*.py" % model_path):
+        for pyfile in glob.glob("%s/*.py" % config.modelDirectory):
             importName = os.path.basename(pyfile).rsplit(".", 1)[0]
             module     = __import__(importName)
             logging.info("Found and loaded model '%s'", importName)

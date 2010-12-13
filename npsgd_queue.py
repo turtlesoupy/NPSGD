@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import os
 import sys
 import logging
@@ -213,15 +214,18 @@ def main():
                         help="Config file", default="config.cfg")
     parser.add_option("-p", "--port", dest="port",
                         help="Queue port number", default=9000)
+    parser.add_option('-l', '--log-filename', dest='log',
+                        help="Log filename (appended to logging directory)", default="npsgd_queue.log")
 
     (options, args) = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG)
     config.loadConfig(options.config)
+    config.setupLogging(options.log)
     model_manager.setupModels()
 
     queueHTTP = tornado.httpserver.HTTPServer(setupQueueApplication())
     queueHTTP.listen(options.port)
+    logging.info("NPSGD Queue Booted up, serving on port %d", options.port)
     print >>sys.stderr, "NPSGD queue server listening on %d" % options.port
 
     tornado.ioloop.IOLoop.instance().start()

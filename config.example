@@ -1,13 +1,19 @@
+[DEFAULT]
+npsgBase     = /home/tdimson/public_html/npsg/npsgd
+
 [npsgd]
-resultsEmailBodyPath     = templates/results_email_body.txt
-confirmEmailTemplatePath = templates/confirm_email_body.txt
-failureEmailTemplatePath = templates/failure_email_body.txt
+loggingDirectory         = /var/log/npsgd
+templateDirectory        = %(npsgBase)s/templates
+modelDirectory           = %(npsgBase)s/models
+resultsEmailBodyPath     = results_email_body.txt
+confirmEmailTemplatePath = confirm_email_body.txt
+failureEmailTemplatePath = failure_email_body.txt
 confirmEmailSubject      = NPSG Job Confirmation
 resultsEmailSubject      = Your NPSG Model Results
 failureEmailSubject      = NPSG Job Failed
-modelTemplatePath        = templates/model.html
-confirmTemplatePath      = templates/confirm.html
-confirmedTemplatePath    = templates/confirmed.html
+modelTemplatePath        = model.html
+confirmTemplatePath      = confirm.html
+confirmedTemplatePath    = confirmed.html
 maxJobFailures           = 3
 keepAliveInterval        = 30
 keepAliveTimeout         = 300
@@ -15,17 +21,16 @@ queueServerAddress       = 127.0.0.1
 queueServerPort          = 9000
 
 [email]
-smtpUsername    = user@gmail.com
-fromAddress     = user@gmail.com
-smtpPassword    = coolsauce
+smtpUsername    = you@example.com
+fromAddress     = you@example.com
+smtpPassword    = coolguy
 smtpServer      = smtp.gmail.com
 smtpPort        = 587
 smtpUseTLS      = true
-cc              = user@gmail.com
 
 [Latex]
 pdflatexPath   = /usr/bin/pdflatex
-resultTemplate = templates/result_template.tex
+resultTemplate = result_template.tex
 
 [Matlab]
 required   = true
