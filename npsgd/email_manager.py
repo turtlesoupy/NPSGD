@@ -89,6 +89,6 @@ class Email(object):
             msg.attach(part)
 
         logging.info("Email: constructed email object, sending")
-        smtpServer.sendmail(config.fromAddress, [self.recipient] + config.cc, msg.as_string())
+        smtpServer.sendmail(config.fromAddress, self.recipient, msg.as_string())
         logging.info("Email: sent")
 

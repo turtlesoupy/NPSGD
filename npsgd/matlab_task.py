@@ -6,6 +6,14 @@ from config import config
 
 class MatlabError(RuntimeError): pass
 class MatlabTask(ModelTask):
+    """Abstract base matlab task.
+
+    This class is meant to be the superclass of the user's various
+    matlab tasks. It takes parameters from the web interface and
+    launches a matlab script with the parameters _directly_
+    available in the matlab namespace.
+    """
+
     abstractModel = "MatlabTask"
 
     #Must specify matlab script

@@ -30,7 +30,11 @@ class TaskKeepAliveThread(Thread):
 
     def run(self):
         fails = 0
-        while not self.done.wait(config.keepAliveInterval).isSet():
+        while True:
+            self.done.wait(config.keepAliveInterval)
+            if self.done.isSet():
+                break
+
             try:
                 logging.info("Making heartbeat request '%s'", self.keepAliveRequest)
                 response = urllib2.urlopen("%s/%s" % (self.keepAliveRequest, self.taskId))

@@ -77,7 +77,8 @@ class ModelTask(object):
         \\end{centering}""" % paramRows
 
     def textParameterTable(self):
-        return "Model:%s\nName, Description, Value, Units\n%s" % (self.__class__.short_name, "\n".join(p.asTextRow() for p in self.modelParameters))
+        return "Model:%s\n\nName, Description, Value, Units\n%s" % (self.__class__.full_name, \
+                "\n".join(p.asTextRow() for p in self.modelParameters))
 
     def emailBody(self):
         return "Model run results from NPSG"
@@ -88,12 +89,18 @@ class ModelTask(object):
     def getAttachments(self):
         pdf = self.generatePDF()
 
-        attach = [('results.pdf', pdf)]
+        attach = [('results.pdf', pdf), ('parameters.txt', self.textParameterTable())]
         for attachment in self.__class__.attachments:
             with open(os.path.join(self.workingDirectory, attachment)) as f:
                 attach.append((attachment, f.read()))
 
         return attach
+
+    def prepareGraphs(self):
+        pass
+
+    def prepareExecution(self):
+        pass
 
     def generatePDF(self):
         latex = config.latexResultTemplate.generate(model_results=self.latexBody())
@@ -138,7 +145,9 @@ class ModelTask(object):
         logging.info("Running default task for '%s'", self.emailAddress)
         self.createWorkingDirectory()
         try:
+            self.prepareExecution()
             self.runModel()
+            self.prepareGraphs()
             return self.resultsEmail(self.getAttachments())
         finally:
             shutil.rmtree(self.workingDirectory)

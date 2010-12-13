@@ -35,7 +35,11 @@ class ExpireWorkerTaskThread(threading.Thread):
     def run(self):
         logging.info("Expire worker task thread booting up...")
 
-        while not self.done.wait(config.keepAliveInterval).isSet():
+        while True:
+            self.done.wait(config.keepAliveInterval)
+            if self.done.isSet():
+                break
+
             badTasks = self.taskQueue.pullProcessingTasksOlderThan(
                     time.time() - config.keepAliveTimeout)
 
