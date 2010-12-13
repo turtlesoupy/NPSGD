@@ -101,6 +101,19 @@ class RangeParameter(ModelParameter):
         else:
             start, end = map(float, value)
 
+        if start > end:
+            raise ValidationError("%s starts after it ends (%s-%s)" % 
+                    (self.name, start, end))
+            
+        if start < self.rangeStart:
+            raise ValidationError("%s start value of '%s' less than minimum '%s'" % 
+                    (self.name, start, self.rangeStart))
+
+        if end > self.rangeEnd:
+            raise ValidationError("%s end value of '%s' greater than maximum '%s'" % 
+                    (self.name, end, self.rangeEnd))
+
+
         self.value = (start, end)
 
     def asMatlabCode(self):
@@ -143,14 +156,11 @@ class RangeParameter(ModelParameter):
                         <label for='%s'>%s</label> 
                     </td>
                     <td>
-                        <input type='text' name='%s' value='%s' /> %s
-                        <input type='hidden' class='rangeStart' value='%s' />
-                        <input type='hidden' class='rangeEnd' value='%s' />
-                        <input type='hidden' class='step' value='%s' />
+                        <input type='text' class="npsgdRange" name='%s' value='%s' data-rangeStart='%s' data-rangeEnd='%s' data-step='%s' /> %s
                         <div class="slider"></div>
                     </td>
                 </tr>
-""" % (self.name, self.description, self.name, self.valueString(), self.units, self.rangeStart, self.rangeEnd, self.step)
+""" % (self.name, self.description, self.name, self.valueString(), self.rangeStart, self.rangeEnd, self.step, self.units)
 
 class FloatParameter(ModelParameter):
     def __init__(self, name, description="", rangeStart=None, rangeEnd=None, \
@@ -164,11 +174,22 @@ class FloatParameter(ModelParameter):
         self.units       = units
         self.value       = None
         self.hidden      = hidden
+        self.htmlClassBase = "npsgdFloat"
         if default != None:
             self.setValue(self.default)
 
-    def setValue(self, value):
-        self.value = float(value)
+    def setValue(self, inVal):
+        value = float(inVal)
+        
+        if self.rangeStart != None and value < self.rangeStart:
+            raise ValidationError("%s value (%s) out of range" % 
+                    (self.name, value))
+
+        if self.rangeEnd != None and value > self.rangeEnd:
+            raise ValidationError("%s value (%s) out of range" % 
+                    (self.name, value))
+
+        self.value = value
 
     def asMatlabCode(self):
         return "%s=%s;" % (self.name, self.value)
@@ -202,19 +223,21 @@ class FloatParameter(ModelParameter):
                             <label for='%s'>%s</label>
                         </td>
                         <td>
-                            <input type='text' name='%s' value='%s'/> %s
-                            <input type='hidden' class='rangeStart' value='%s' />
-                            <input type='hidden' class='rangeEnd' value='%s' />
-                            <input type='hidden' class='step' value='%s' />
+                            <input type='text' class='%sRange' name='%s' value='%s' 
+                            data-rangeStart='%s' data-rangeEnd='%s' data-step='%s' /> %s
                             <div class="slider"></div>
                         </td>
                     </tr>
-    """ % (self.name, self.description, self.name, self.valueString(), self.units, self.rangeStart, self.rangeEnd, self.step)
+    """ % (self.name, self.description, self.htmlClassBase, self.name, self.valueString(), self.rangeStart, self.rangeEnd, self.step, self.units)
         else:
-            return "<tr><td><label for='%s'>%s</label></td><td><input type='text' name='%s' value='%s'/> %s</td></tr>" \
-                % (self.name, self.description, self.name, self.valueString(), self.units)
+            return "<tr><td><label for='%s'>%s</label></td><td><input type='text' class='%s' name='%s' value='%s'/> %s</td></tr>" \
+                % (self.name, self.description, self.htmlClassBase, self.name, self.valueString(), self.units)
 
 class IntegerParameter(FloatParameter):
+    def __init__(self, *args, **kwargs):
+        FloatParameter.__init__(self, *args, **kwargs)
+        self.htmlClassBase = "npsgdInteger"
+
     def setValue(self, value):
         self.value = int(value)
 

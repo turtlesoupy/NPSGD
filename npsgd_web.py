@@ -17,6 +17,7 @@ from npsgd import ui_modules
 
 from npsgd.model_manager import modelManager
 from npsgd.model_task import ModelTask
+from npsgd.model_parameters import ValidationError
 from npsgd.config import config
 
 class ClientModelRequest(tornado.web.RequestHandler):
@@ -27,8 +28,13 @@ class ClientModelRequest(tornado.web.RequestHandler):
     def post(self):
         try:
             task = self.setupModelTask()
+        except ValidationError, e:
+            logging.exception(e)
+            self.render(config.modelTemplatePath, model=self.model, errorText=str(e))
+            return
         except tornado.web.HTTPError, e:
-            self.render(config.modelTemplatePath, model=self.model)
+            logging.exception(e)
+            self.render(config.modelTemplatePath, model=self.model, errorText=None)
             return
 
         logging.info("Making async request to get confirmation number for task")
