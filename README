@@ -6,6 +6,8 @@ by spawning subprocesses. For matlab scripts, NPSGD includes an easy way
 to deliver variables "magically" from the web to your script's door. It is likely
 that no modifications will be required.
 
+NPSGD is available under a BSD-style license. See LICENSE for details.
+
 This software is far from production ready and is under active development
 I don't recommend using it except to play around with. Documentation is
 non-existent for a while.
