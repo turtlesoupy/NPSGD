@@ -7,11 +7,9 @@ from email_manager import Email
 import shutil
 
 from config import config
-from model_manager import ModelMount
 
 class LatexError(RuntimeError): pass
 class ModelTask(object):
-    __metaclass__ = ModelMount
     abstractModel = "ModelTask"
 
     #Every model short implement a subset of these
@@ -59,6 +57,7 @@ class ModelTask(object):
             "taskId":          self.taskId, 
             "failureCount":    self.failureCount,
             "modelName":       self.__class__.short_name,
+            "modelVersion":    self.__class__.version,
             "modelParameters": dict((p.name, p.asDict()) for p in self.modelParameters)
         }
 

@@ -28,7 +28,6 @@ class TaskKeepAliveThread(Thread):
         self.taskId           = taskId
         self.daemon           = True
 
-
     def run(self):
         fails = 0
         while True:
@@ -153,7 +152,7 @@ class NPSGDWorker(object):
 
         try:
             try:
-                model = modelManager.getModel(taskDict["modelName"])
+                model = modelManager.getModel(taskDict["modelName"], taskDict["modelVersion"])
                 logging.info("Creating a model task for '%s'", taskDict["modelName"])
                 taskObject = model.fromDict(taskDict)
             except KeyError, e:
@@ -193,13 +192,14 @@ def main():
             help="Configuration file path", type="string", default="config.cfg")
 
     parser.add_option('-l', '--log-filename', dest='log',
-                        help="Log filename (appended to logging directory)", default="npsgd_worker.log")
+                        help="Log filename (appended to logging directory use '-' for stderr)", default="-")
 
     (options, args) = parser.parse_args()
 
     config.loadConfig(options.config)
     config.setupLogging(options.log)
     model_manager.setupModels()
+    model_manager.startScannerThread()
 
     worker = NPSGDWorker(config.queueServerAddress, config.queueServerPort)
     logging.info("NPSGD Worker booted up, going into event loop")

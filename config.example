@@ -17,6 +17,7 @@ modelTemplatePath        = model.html
 confirmTemplatePath      = confirm.html
 confirmedTemplatePath    = confirmed.html
 maxJobFailures           = 3
+modelScanInterval        = 120
 keepAliveInterval        = 30
 keepAliveTimeout         = 300
 queueServerAddress       = 127.0.0.1

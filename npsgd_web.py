@@ -22,23 +22,26 @@ from npsgd.model_parameters import ValidationError
 from npsgd.config import config
 
 class ClientModelRequest(tornado.web.RequestHandler):
-    def initialize(self, model):
-        self.model = model
+    def initialize(self, modelName):
+        self.modelName = modelName
 
     def get(self):
-        self.render(config.modelTemplatePath, model=self.model, errorText=None)
+        model = modelManager.getLatestModel(self.modelName)
+        self.render(config.modelTemplatePath, model=model, errorText=None)
 
     @tornado.web.asynchronous
     def post(self):
+        modelVersion = self.get_argument("modelVersion")
+        model = modelManager.getModel(self.modelName, modelVersion)
         try:
-            task = self.setupModelTask()
+            task = self.setupModelTask(model)
         except ValidationError, e:
             logging.exception(e)
-            self.render(config.modelTemplatePath, model=self.model, errorText=str(e))
+            self.render(config.modelTemplatePath, model=model, errorText=str(e))
             return
         except tornado.web.HTTPError, e:
             logging.exception(e)
-            self.render(config.modelTemplatePath, model=self.model, errorText=None)
+            self.render(config.modelTemplatePath, model=model, errorText=None)
             return
 
         logging.info("Making async request to get confirmation number for task")
@@ -58,7 +61,7 @@ class ClientModelRequest(tornado.web.RequestHandler):
             json = tornado.escape.json_decode(response.body)
             logging.info(json)
             res = json["response"]
-            model = modelManager.getModel(res["task"]["modelName"])
+            model = modelManager.getModel(res["task"]["modelName"], res["task"]["modelVersion"])
             task = model.fromDict(res["task"])
             code = res["code"]
         except KeyError:
@@ -67,16 +70,16 @@ class ClientModelRequest(tornado.web.RequestHandler):
 
         self.render(config.confirmTemplatePath, email=task.emailAddress, code=code)
 
-    def setupModelTask(self):
+    def setupModelTask(self, model):
         email = self.get_argument("email")
 
         paramDict = {}
-        for param in self.model.parameters:
+        for param in model.parameters:
             argVal = self.get_argument(param.name)
             value = param.withValue(argVal)
             paramDict[param.name] = value.asDict()
 
-        task = self.model(email, 0, paramDict)
+        task = model(email, 0, paramDict)
         return task
 
 
@@ -113,8 +116,8 @@ def setupClientApplication():
         (r"/confirm_submission/(\w+)", ClientConfirmRequest)
     ]
 
-    for modelName in modelManager.modelNames():
-        appList.append(("/models/%s" % modelName, ClientModelRequest, dict(model=modelManager.getModel(modelName))))
+    for modelName, modelVersion in modelManager.modelVersions():
+        appList.append(("/models/%s" % modelName, ClientModelRequest, dict(modelName=modelName)))
 
     settings = {
         "static_path": os.path.join(os.path.dirname(__file__), "static"),
@@ -132,13 +135,14 @@ def main():
     parser.add_option('-p', '--client-port', dest='port',
                         help="Http port (for serving html)", default=8000, type="int")
     parser.add_option('-l', '--log-filename', dest='log',
-                        help="Log filename (appended to logging directory)", default="npsgd_web.log")
+                        help="Log filename (appended to logging directory use '-' for stderr)", default="-")
 
     (options, args) = parser.parse_args()
 
     config.loadConfig(options.config)
     config.setupLogging(options.log)
     model_manager.setupModels()
+    model_manager.startScannerThread()
 
     clientHTTP = tornado.httpserver.HTTPServer(setupClientApplication())
     clientHTTP.listen(options.port)

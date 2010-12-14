@@ -76,7 +76,7 @@ glb = QueueGlobals()
 class ClientModelCreate(tornado.web.RequestHandler):
     def post(self):
         task_json = tornado.escape.json_decode(self.get_argument("task_json"))
-        model = modelManager.getModel(task_json["modelName"])
+        model = modelManager.getModel(task_json["modelName"], task_json["modelVersion"])
         task  = model.fromDict(task_json)
         task.taskId = glb.newTaskId()
         code = glb.confirmationMap.putRequest(task)
@@ -215,13 +215,14 @@ def main():
     parser.add_option("-p", "--port", dest="port",
                         help="Queue port number", default=9000)
     parser.add_option('-l', '--log-filename', dest='log',
-                        help="Log filename (appended to logging directory)", default="npsgd_queue.log")
+                        help="Log filename (appended to logging directory, use '-' for stderr)", default="-")
 
     (options, args) = parser.parse_args()
 
     config.loadConfig(options.config)
     config.setupLogging(options.log)
     model_manager.setupModels()
+    model_manager.startScannerThread()
 
     queueHTTP = tornado.httpserver.HTTPServer(setupQueueApplication())
     queueHTTP.listen(options.port)

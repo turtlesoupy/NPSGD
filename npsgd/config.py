@@ -11,9 +11,15 @@ class Config(object):
         pass
 
     def setupLogging(self, logName):
-        logFilename = os.path.join(config.loggingDirectory, logName)
-        logging.basicConfig(filename=os.path.join(config.loggingDirectory, logName),\
-                            level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+        lLevel = logging.DEBUG
+        lFormat = format="%(asctime)s - %(levelname)s - %(message)s"
+
+        if logName == "-":
+            logging.basicConfig(level=lLevel, format=lFormat)
+        else:
+            logFilename = os.path.join(config.loggingDirectory, logName)
+            logging.basicConfig(filename=os.path.join(config.loggingDirectory, logName),\
+                                level=lLevel, format=lFormat)
 
     def loadConfig(self, configPath):
         config = ConfigParser.SafeConfigParser()
@@ -35,6 +41,7 @@ class Config(object):
         self.maxJobFailures           = config.getint("npsgd", "maxJobFailures")
         self.keepAliveInterval        = config.getint("npsgd", "keepAliveInterval")
         self.keepAliveTimeout         = config.getint("npsgd", "keepAliveTimeout")
+        self.modelScanInterval        = config.getint("npsgd", "modelScanInterval")
         self.queueServerAddress       = config.get("npsgd", "queueServerAddress")
         self.queueServerPort          = config.getint("npsgd", "queueServerPort")
         self.loggingDirectory         = config.get("npsgd", "loggingDirectory")
