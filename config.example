@@ -3,7 +3,9 @@ npsgBase     = /home/tdimson/public_html/npsg/npsgd
 
 [npsgd]
 loggingDirectory         = /var/log/npsgd
-templateDirectory        = %(npsgBase)s/templates
+htmlTemplateDirectory    = %(npsgBase)s/templates/html/basic
+emailTemplateDirectory   = %(npsgBase)s/templates/email
+latexTemplateDirectory    = %(npsgBase)s/templates/latex
 modelDirectory           = %(npsgBase)s/models
 resultsEmailBodyPath     = results_email_body.txt
 confirmEmailTemplatePath = confirm_email_body.txt
@@ -21,8 +23,8 @@ queueServerAddress       = 127.0.0.1
 queueServerPort          = 9000
 
 [email]
-smtpUsername    = you@example.com
-fromAddress     = you@example.com
+smtpUsername    = dummy@you.com
+fromAddress     = dummy@you.com
 smtpPassword    = coolguy
 smtpServer      = smtp.gmail.com
 smtpPort        = 587
