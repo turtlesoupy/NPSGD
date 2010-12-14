@@ -119,7 +119,7 @@ def setupClientApplication():
     settings = {
         "static_path": os.path.join(os.path.dirname(__file__), "static"),
         "ui_modules": ui_modules,
-        "template_path": config.templateDirectory
+        "template_path": config.htmlTemplateDirectory
     }
 
     return tornado.web.Application(appList, **settings)

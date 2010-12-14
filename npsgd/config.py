@@ -39,11 +39,19 @@ class Config(object):
         self.queueServerPort          = config.getint("npsgd", "queueServerPort")
         self.loggingDirectory         = config.get("npsgd", "loggingDirectory")
         self.modelDirectory           = config.get("npsgd", "modelDirectory")
-        self.templateDirectory        = config.get("npsgd", "templateDirectory")
+        self.htmlTemplateDirectory    = config.get("npsgd", "htmlTemplateDirectory")
+        self.emailTemplateDirectory   = config.get("npsgd", "emailTemplateDirectory")
+        self.latexTemplateDirectory   = config.get("npsgd", "latexTemplateDirectory")
 
 
-        if not os.path.exists(self.templateDirectory):
-            raise ConfigError("Template directory '%s' does not exist" % self.templateDirectory)
+        if not os.path.exists(self.htmlTemplateDirectory):
+            raise ConfigError("HTML template directory '%s' does not exist" % self.htmlTemplateDirectory)
+
+        if not os.path.exists(self.emailTemplateDirectory):
+            raise ConfigError("Email template directory '%s' does not exist" % self.emailTemplateDirectory)
+
+        if not os.path.exists(self.latexTemplateDirectory):
+            raise ConfigError("Latex template directory '%s' does not exist" % self.latexTemplateDirectory)
 
         if not os.path.exists(self.loggingDirectory):
             raise ConfigError("Logging directory '%s' does not exist" % self.loggingDirectory)
@@ -51,12 +59,13 @@ class Config(object):
         if not os.path.exists(self.modelDirectory):
             raise ConfigError("Model directory '%s' does not exist" % self.modelDirectory)
 
-
-        tLoader = tornado.template.Loader(self.templateDirectory)
+        tLoader = tornado.template.Loader(self.emailTemplateDirectory)
         self.resultsEmailBodyTemplate = tLoader.load(self.resultsEmailBodyPath)
-        self.latexResultTemplate      = tLoader.load(self.latexResultTemplatePath)
         self.confirmEmailTemplate     = tLoader.load(self.confirmEmailTemplatePath)
         self.failureEmailTemplate     = tLoader.load(self.failureEmailTemplatePath)
+
+        tLoader = tornado.template.Loader(self.latexTemplateDirectory)
+        self.latexResultTemplate      = tLoader.load(self.latexResultTemplatePath)
 
         self.loadEmail(config)
         self.checkIntegrity()

@@ -33,7 +33,7 @@ class ModelTask(object):
 
     def createWorkingDirectory(self):
         try:
-            os.mkdir(self.workingDirectory)
+            os.makedirs(self.workingDirectory, 0777)
         except OSError, e:
             logging.warning(e)
 
@@ -150,4 +150,5 @@ class ModelTask(object):
             self.prepareGraphs()
             return self.resultsEmail(self.getAttachments())
         finally:
-            shutil.rmtree(self.workingDirectory)
+            if os.path.exists(self.workingDirectory):
+                shutil.rmtree(self.workingDirectory)
