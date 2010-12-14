@@ -95,7 +95,7 @@ class ClientConfirmRequest(tornado.web.RequestHandler):
         http.fetch(request, self.confirmationCallback)
 
     def confirmationCallback(self, response):
-        if response.error: raise tornado.web.HTTPError(500)
+        if response.error: raise tornado.web.HTTPError(404)
 
         json = tornado.escape.json_decode(response.body)
         res = json["response"]
