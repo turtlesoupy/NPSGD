@@ -60,46 +60,49 @@ class NPSGDWorker(object):
         self.supportedModels = ["test"]
         self.requestErrors   = 0
         self.maxErrors       = 3 
-        self.errorSleepTime    = 3
+        self.errorSleepTime    = 10
         self.requestSleepTime = 10
-        self.getServerInfo()
 
     def getServerInfo(self):
         try:
             response = urllib2.urlopen(self.infoRequest)
         except urllib2.URLError, e:
             logging.error("Failed to make initial connection to %s", self.baseRequest)
-            sys.exit(1)
+            return
         
         logging.info("Got initial response from server")
-
-    def responseError(self):
-        self.requestErrors += 1
-        if self.requestErrors >= self.maxErrors:
-            logging.critical("Exceeded max errors of %d, terminating", self.maxErrors)
-            sys.exit(1)
-        time.sleep(self.errorSleepTime)
 
     def loop(self):
         logging.info("Entering event loop")
         while True:
             try:
+                self.handleEvents()
+            except Exception:
+                logging.exception("Unhandled exception in event loop!")
+                
+    def handleEvents(self):
+            try:
                 logging.info("Polling %s for tasks" % self.taskRequest)
                 response = urllib2.urlopen(self.taskRequest)
             except urllib2.URLError, e:
+                self.requestErrors += 1
                 logging.error("Error making worker request to server, attempt #%d", self.requestErrors + 1)
-                self.responseError()
-                continue
+                time.sleep(self.errorSleepTime)
+                return
 
             try:
                 decodedResponse = json.load(response)
             except ValueError, e:
+                self.requestErrors += 1
                 logging.error("Error decoding server response, attempt #%d", self.requestErrors +1)
-                self.responseError()
-                continue
+                time.sleep(self.errorSleepTime)
+                return
 
+            self.requestErrors = 0 
             self.processResponse(decodedResponse)
             time.sleep(self.requestSleepTime)
+
+
 
     def processResponse(self, response):
         if "status" in response:
@@ -114,7 +117,6 @@ class NPSGDWorker(object):
             response = urllib2.urlopen("%s/%s" % (self.failedTaskRequest, taskId))
         except urllib2.URLError, e:
             logging.error("Failed to communicate failed task to server %s", self.baseRequest)
-            self.responseError()
 
     def notifySucceedTask(self, taskId):
         try:
@@ -122,7 +124,6 @@ class NPSGDWorker(object):
             response = urllib2.urlopen("%s/%s" % (self.succeedTaskRequest, taskId))
         except urllib2.URLError, e:
             logging.error("Failed to communicate succeeded task to server %s", self.baseRequest)
-            self.responseError()
 
     def serverHasTask(self, taskId):
         try:
@@ -130,7 +131,6 @@ class NPSGDWorker(object):
             response = urllib2.urlopen("%s/%s" % (self.hasTaskRequest, taskId))
         except urllib2.URLError, e:
             logging.error("Failed to make has task request to server %s", self.baseRequest)
-            self.responseError()
             raise RuntimeError(e)
 
         try:
@@ -203,6 +203,7 @@ def main():
 
     worker = NPSGDWorker(config.queueServerAddress, config.queueServerPort)
     logging.info("NPSGD Worker booted up, going into event loop")
+    worker.getServerInfo()
     worker.loop()
 
 if __name__ == "__main__":

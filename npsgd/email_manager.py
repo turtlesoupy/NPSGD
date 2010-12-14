@@ -19,6 +19,7 @@ def blockingEmailSend(email):
         s = smtpServer()
     except socket.gaierror, e:
         raise EmailSendError("Unable to connect to smtp server")
+    
 
     try:
         logging.info("Connected to SMTP server, sending email")
@@ -56,9 +57,12 @@ class EmailManagerThread(Thread):
 
     def run(self):
         while True:
-            email = self.queue.get(True)
-            logging.info("Email Manager: Found email in the queue, attempting to send")
-            blockingEmailSend(email)
+            try:
+                email = self.queue.get(True)
+                logging.info("Email Manager: Found email in the queue, attempting to send")
+                blockingEmailSend(email)
+            except Exception:
+                logging.exception("Unhandled exception in email thread!")
 
 class Email(object):
     def __init__(self, recipient, subject, body, binaryAttachments=[], textAttachments=[]):
