@@ -15,7 +15,7 @@ class ABMB(abmu_c.ABMU):
     subtitle='Algorithmic BDF Model Bifacial'
     parameters = [
             IntegerParameter('nSamples', description="Number of Samples", 
-                rangeStart=1000, rangeEnd=100000, step=1),
+                rangeStart=1000, rangeEnd=100000, step=1, default=10000),
             RangeParameter('wavelengths', description="Wavelengths",
                 rangeStart=400, rangeEnd=2500, step=5, units="nm"),
             FloatParameter('angleOfIncidence', description="Incident Angle",
