@@ -156,7 +156,7 @@ class NPSGDWorker(object):
                 logging.info("Creating a model task for '%s'", taskDict["modelName"])
                 taskObject = model.fromDict(taskDict)
             except KeyError, e:
-                logging.warning("Was unable to deserialize model task")
+                logging.warning("Was unable to deserialize model task (%s), model task: %s", e, taskDict)
                 if taskId:
                     self.notifyFailedTask(taskId)
                 return
