@@ -63,6 +63,7 @@ class EmailManagerThread(Thread):
                 blockingEmailSend(email)
             except Exception:
                 logging.exception("Unhandled exception in email thread!")
+                self.queue.put(email)
 
 class Email(object):
     def __init__(self, recipient, subject, body, binaryAttachments=[], textAttachments=[]):
