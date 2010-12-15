@@ -37,3 +37,8 @@ h2.modelSubtitle {
     color: red;
     padding: 10px 0;
 }
+
+label.error {
+    display: block;
+    font-size: 8pt;
+}
