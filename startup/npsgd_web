@@ -17,7 +17,8 @@ DESC="npsgd web hosting daemon"
 NAME=npsgd_web
 DAEMON=/home/tdimson/public_html/npsg/npsgd/$NAME.py
 CONFIGFILE=/home/tdimson/public_html/npsg/npsgd/config.cfg
-DAEMON_ARGS="-c $CONFIGFILE"
+LOGFILE=/var/log/npsgd/npsgd_web.log
+DAEMON_ARGS="-c $CONFIGFILE -l $LOGFILE"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 

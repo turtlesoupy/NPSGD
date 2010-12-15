@@ -192,7 +192,7 @@ def main():
             help="Configuration file path", type="string", default="config.cfg")
 
     parser.add_option('-l', '--log-filename', dest='log',
-                        help="Log filename (appended to logging directory use '-' for stderr)", default="-")
+                        help="Log filename (use '-' for stderr)", default="-")
 
     (options, args) = parser.parse_args()
 

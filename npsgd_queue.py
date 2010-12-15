@@ -215,7 +215,7 @@ def main():
     parser.add_option("-p", "--port", dest="port",
                         help="Queue port number", default=9000)
     parser.add_option('-l', '--log-filename', dest='log',
-                        help="Log filename (appended to logging directory, use '-' for stderr)", default="-")
+                        help="Log filename (use '-' for stderr)", default="-")
 
     (options, args) = parser.parse_args()
 

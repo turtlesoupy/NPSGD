@@ -2,7 +2,6 @@
 npsgBase     = /home/tdimson/public_html/npsg/npsgd
 
 [npsgd]
-loggingDirectory         = /var/log/npsgd
 htmlTemplateDirectory    = %(npsgBase)s/templates/html/basic
 emailTemplateDirectory   = %(npsgBase)s/templates/email
 latexTemplateDirectory    = %(npsgBase)s/templates/latex

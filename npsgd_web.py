@@ -22,17 +22,14 @@ from npsgd.model_parameters import ValidationError
 from npsgd.config import config
 
 class ClientModelRequest(tornado.web.RequestHandler):
-    def initialize(self, modelName):
-        self.modelName = modelName
-
-    def get(self):
-        model = modelManager.getLatestModel(self.modelName)
+    def get(self, modelName):
+        model = modelManager.getLatestModel(modelName)
         self.render(config.modelTemplatePath, model=model, errorText=None)
 
     @tornado.web.asynchronous
-    def post(self):
+    def post(self, modelName):
         modelVersion = self.get_argument("modelVersion")
-        model = modelManager.getModel(self.modelName, modelVersion)
+        model = modelManager.getModel(modelName, modelVersion)
         try:
             task = self.setupModelTask(model)
         except ValidationError, e:
@@ -113,11 +110,9 @@ class ClientConfirmRequest(tornado.web.RequestHandler):
 def setupClientApplication():
     appList = [ 
         (r"/", ClientBaseRequest),
-        (r"/confirm_submission/(\w+)", ClientConfirmRequest)
+        (r"/confirm_submission/(\w+)", ClientConfirmRequest),
+        (r"/models/(.*)", ClientModelRequest)
     ]
-
-    for modelName, modelVersion in modelManager.modelVersions():
-        appList.append(("/models/%s" % modelName, ClientModelRequest, dict(modelName=modelName)))
 
     settings = {
         "static_path": os.path.join(os.path.dirname(__file__), "static"),
@@ -135,7 +130,7 @@ def main():
     parser.add_option('-p', '--client-port', dest='port',
                         help="Http port (for serving html)", default=8000, type="int")
     parser.add_option('-l', '--log-filename', dest='log',
-                        help="Log filename (appended to logging directory use '-' for stderr)", default="-")
+                        help="Log filename (use '-' for stderr)", default="-")
 
     (options, args) = parser.parse_args()
 

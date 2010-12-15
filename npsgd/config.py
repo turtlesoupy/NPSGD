@@ -10,16 +10,14 @@ class Config(object):
     def __init__(self):
         pass
 
-    def setupLogging(self, logName):
+    def setupLogging(self, logPath):
         lLevel = logging.DEBUG
         lFormat = format="%(asctime)s - %(levelname)s - %(message)s"
 
-        if logName == "-":
+        if logPath == "-":
             logging.basicConfig(level=lLevel, format=lFormat)
         else:
-            logFilename = os.path.join(config.loggingDirectory, logName)
-            logging.basicConfig(filename=os.path.join(config.loggingDirectory, logName),\
-                                level=lLevel, format=lFormat)
+            logging.basicConfig(filename=logPath, level=lLevel, format=lFormat)
 
     def loadConfig(self, configPath):
         config = ConfigParser.SafeConfigParser()
@@ -44,7 +42,6 @@ class Config(object):
         self.modelScanInterval        = config.getint("npsgd", "modelScanInterval")
         self.queueServerAddress       = config.get("npsgd", "queueServerAddress")
         self.queueServerPort          = config.getint("npsgd", "queueServerPort")
-        self.loggingDirectory         = config.get("npsgd", "loggingDirectory")
         self.modelDirectory           = config.get("npsgd", "modelDirectory")
         self.htmlTemplateDirectory    = config.get("npsgd", "htmlTemplateDirectory")
         self.emailTemplateDirectory   = config.get("npsgd", "emailTemplateDirectory")
@@ -59,9 +56,6 @@ class Config(object):
 
         if not os.path.exists(self.latexTemplateDirectory):
             raise ConfigError("Latex template directory '%s' does not exist" % self.latexTemplateDirectory)
-
-        if not os.path.exists(self.loggingDirectory):
-            raise ConfigError("Logging directory '%s' does not exist" % self.loggingDirectory)
 
         if not os.path.exists(self.modelDirectory):
             raise ConfigError("Model directory '%s' does not exist" % self.modelDirectory)

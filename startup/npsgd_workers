@@ -20,6 +20,7 @@ CONFIGFILE=/home/tdimson/public_html/npsg/npsgd/config.cfg
 DAEMON_ARGS="-c $CONFIGFILE"
 #PIDFILE=/var/run/$NAME.pid
 PIDBASE=/var/run/$NAME
+LOGDIR=/var/log
 SCRIPTNAME=/etc/init.d/$NAME
 WORKERS="1 2 3 4 5"
 
@@ -51,7 +52,7 @@ do_start()
         start-stop-daemon --start --background --make-pidfile --pidfile ${PIDBASE}_$i.pid --exec $DAEMON --test > /dev/null \
             || return 1
         start-stop-daemon --start --background --make-pidfile --pidfile ${PIDBASE}_$i.pid --exec $DAEMON -- \
-            $DAEMON_ARGS -l npsgd_worker_$i.log \
+            $DAEMON_ARGS -l $LOGDIR/npsgd_worker_$i.log \
             || return 2
     done
 	# Add code here, if necessary, that waits for the process to be ready
