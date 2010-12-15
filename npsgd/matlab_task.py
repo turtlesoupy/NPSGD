@@ -26,8 +26,12 @@ class MatlabTask(ModelTask):
         io = "%s;\npath('%s', path);\n%s;\nexit;\n" % (paramCode, matlabBase, matlabFun)
 
         logging.info("Opening matlab with script:\n %s", io)
-        mProcess = subprocess.Popen([config.matlabPath, "-nodisplay"], stdin=subprocess.PIPE, cwd=self.workingDirectory)
-        mProcess.communicate(io)
+        mProcess = subprocess.Popen([config.matlabPath, "-nodisplay"], stdin=subprocess.PIPE, 
+                cwd=self.workingDirectory, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = mProcess.communicate(io)
+        logging.info("Stdout was: --------\n%s\n-----",  stdout)
+        logging.info("Stderr was: --------\n%s\n-----",  stderr)
+
         if mProcess.returncode != 0:
             raise MatlabError("Bad return code %s from matlab" % mProcess.returncode)
         logging.info("Matlab all done!")

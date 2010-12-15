@@ -27,8 +27,10 @@ class StandaloneTask(ModelTask):
 
         logging.info("Launching subprocess '%s %s'", exe, " ".join(self.executableParameters()))
         mProcess = subprocess.Popen([exe] + self.executableParameters(),
-                cwd=self.workingDirectory)
-        mProcess.wait()
+                cwd=self.workingDirectory, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = mProcess.communicate()
+        logging.info("Stdout was: --------\n%s\n-----",  stdout)
+        logging.info("Stderr was: --------\n%s\n-----",  stderr)
 
         if mProcess.returncode != 0:
             raise ExecutableError("Bad return code '%s' from '%s'" % (mProcess.returnCode, exe))
