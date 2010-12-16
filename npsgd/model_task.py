@@ -68,27 +68,20 @@ class ModelTask(object):
         paramRows = "\\\\\n".join(p.asLatexRow() for p in self.modelParameters)
         return """
         \\begin{centering}
-        \\begin{tabular*}{6in}{@{\\extracolsep{\\fill}} c c c}
-        \\textbf{Name} & \\textbf{Description} & \\textbf{Value} \\\\
+        \\begin{tabular*}{6in}{@{\\extracolsep{\\fill}} c c}
+        \\textbf{Parameter} & \\textbf{Value} \\\\
         \\hline
         %s
         \\end{tabular*}
         \\end{centering}""" % paramRows
 
     def textParameterTable(self):
-        return "Model:%s\n\nName, Description, Value, Units\n%s" % (self.__class__.full_name, \
-                "\n".join(p.asTextRow() for p in self.modelParameters))
-
-    def emailBody(self):
-        return "Model run results from NPSG"
-
-    def emailTitle(self):
-        return "Model run results from NPSG"
+        return "\n".join(p.asTextRow() for p in self.modelParameters)
 
     def getAttachments(self):
         pdf = self.generatePDF()
 
-        attach = [('results.pdf', pdf), ('parameters.txt', self.textParameterTable())]
+        attach = [('results.pdf', pdf)]
         for attachment in self.__class__.attachments:
             with open(os.path.join(self.workingDirectory, attachment)) as f:
                 attach.append((attachment, f.read()))
@@ -111,12 +104,14 @@ class ModelTask(object):
         with open(texPath, 'w') as f:
             f.write(latex)
 
-        logging.info("Calling PDFLatex to generate pdf output")
-        retCode = subprocess.call([config.pdfLatexPath, "-halt-on-error", texPath], cwd=self.workingDirectory)
-        logging.info("PDFLatex terminated with error code %d", retCode)
+        logging.info("Will run PDFLatex %d times", config.latexNumRuns)
+        for i in xrange(config.latexNumRuns):
+            logging.info("Calling PDFLatex (run %d) to generate pdf output", i+1)
+            retCode = subprocess.call([config.pdfLatexPath, "-halt-on-error", texPath], cwd=self.workingDirectory)
+            logging.info("PDFLatex terminated with error code %d", retCode)
 
-        if retCode != 0:
-            raise LatexError("Bad exit code from latex")
+            if retCode != 0:
+                raise LatexError("Bad exit code from latex")
 
         with open(pdfOutputPath, 'rb') as f:
             pdf = f.read()
@@ -127,12 +122,12 @@ class ModelTask(object):
     def failureEmail(self):
         return Email(self.emailAddress, 
                 config.failureEmailSubject,
-                config.failureEmailTemplate.generate())
+                config.failureEmailTemplate.generate(task=self))
 
     def resultsEmail(self, attachments):
         return Email(self.emailAddress,
                 config.resultsEmailSubject,
-                config.resultsEmailBodyTemplate.generate(),
+                config.resultsEmailBodyTemplate.generate(task=self),
                 attachments)
 
     def runModel(self):

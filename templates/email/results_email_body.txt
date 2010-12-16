@@ -1,8 +1,11 @@
 Hi,
 
-This email address recently requested a model run for the NPSG group at the university of
-Waterloo. We are happy to report that the run succeeded. We have attached a pdf copy
-of the results to this message.
+This email address recently requested a model run of {{task.full_name}}
+for the NPSG group at the university of Waterloo. We are happy to report 
+that the run succeeded. We have attached a pdf copy of the results to this message.
+
+Your specified parameters were:
+{{task.textParameterTable()}}
 
 Natural Phenomenon Simulation Group
 University of Waterloo

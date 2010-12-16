@@ -6,5 +6,9 @@ unable to complete it.
 
 You can try to rerun again at any time.
 
+Your specified parameters were:
+{{task.textParameterTable()}}
+
+
 Natural Phenomenon Simulation Group
 University of Waterloo

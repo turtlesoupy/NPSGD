@@ -23,9 +23,10 @@ class Config(object):
         config = ConfigParser.SafeConfigParser()
         config.read(configPath)
 
-        self.matlabPath     = config.get('Matlab', 'matlabPath')
-        self.matlabRequired = config.getboolean('Matlab', 'required')
-        self.pdfLatexPath   = config.get('Latex',  'pdfLatexPath')
+        self.matlabPath               = config.get('Matlab', 'matlabPath')
+        self.matlabRequired           = config.getboolean('Matlab', 'required')
+        self.pdfLatexPath             = config.get('Latex',  'pdfLatexPath')
+        self.latexNumRuns             = config.getint("Latex", "numRuns")
         self.resultsEmailBodyPath     = config.get("npsgd", "resultsEmailBodyPath")
         self.confirmEmailTemplatePath = config.get("npsgd", "confirmEmailTemplatePath")
         self.failureEmailTemplatePath = config.get("npsgd", "failureEmailTemplatePath")

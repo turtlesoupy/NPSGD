@@ -55,10 +55,10 @@ class StringParameter(ModelParameter):
         return "%s='%s';" % (self.name, matlabEscape(self.value))
 
     def asTextRow(self):
-        return "%s, %s, %s, %s" % (self.name, self.description, self.value, self.units)
+        return "%s: %s %s" % (self.description, self.value, self.units)
 
     def asLatexRow(self):
-        return "%s & %s & %s %s" % (self.name, self.description, latexEscape(self.value), latexEscape(self.units))
+        return "%s & %s %s" % (self.description, latexEscape(self.value), latexEscape(self.units))
 
     def valueString(self):
         if self.value == None:
@@ -121,10 +121,10 @@ class RangeParameter(ModelParameter):
         return "%sStart=%s;\n%sEnd=%s;\n%s=%s:%s:%s;" % (self.name, start, self.name, end, self.name, start, self.step, end)
 
     def asTextRow(self):
-        return "%s, %s, %s-%s, %s" % (self.name, self.description, self.value[0], self.value[1], self.units)
+        return "%s: %s-%s %s" % (self.description, self.value[0], self.value[1], self.units)
 
     def asLatexRow(self):
-        return "%s & %s & %s-%s %s" % (latexEscape(self.name), latexEscape(self.description), self.value[0], self.value[1], latexEscape(self.units))
+        return "%s & %s-%s %s" % (latexEscape(self.description), self.value[0], self.value[1], latexEscape(self.units))
 
     def valueString(self):
         if self.value == None:
@@ -195,10 +195,10 @@ class FloatParameter(ModelParameter):
         return "%s=%s;" % (self.name, self.value)
 
     def asTextRow(self):
-        return "%s, %s, %s, %s" % (self.name, self.description, self.value, self.units)
+        return "%s: %s %s" % (self.description, self.value, self.units)
 
     def asLatexRow(self):
-        return "%s & %s & %s %s" % (latexEscape(self.name), latexEscape(self.description), self.value, latexEscape(self.units))
+        return "%s & %s %s" % (latexEscape(self.description), self.value, latexEscape(self.units))
 
     def valueString(self):
         if self.value == None:
