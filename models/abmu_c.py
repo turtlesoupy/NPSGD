@@ -154,21 +154,21 @@ class ABMU(StandaloneTask):
             \begin{figure}
             \begin{centering}
             \includegraphics[width=5in]{reflectance}
-            \caption{Reflectance Curve}
+            \caption{Directional-hemispherical Reflectance}
             \end{centering}
             \end{figure}
 
             \begin{figure}
             \begin{centering}
             \includegraphics[width=5in]{transmittance}
-            \caption{Transmittance Curve}
+            \caption{Directional-hemispherical Transmittance}
             \end{centering}
             \end{figure}
 
             \begin{figure}
             \begin{centering}
             \includegraphics[width=5in]{absorptance}
-            \caption{Absorptance Curve}
+            \caption{Directional-hemispherical Absorptance}
             \end{centering}
             \end{figure}
 
