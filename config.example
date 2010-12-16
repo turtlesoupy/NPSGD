@@ -33,6 +33,7 @@ smtpUseTLS      = true
 [Latex]
 pdflatexPath   = /usr/bin/pdflatex
 resultTemplate = result_template.tex
+numRuns = 2
 
 [Matlab]
 required   = true
