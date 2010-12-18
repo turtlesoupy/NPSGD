@@ -37,13 +37,22 @@ class ModelParameter(object):
     def hiddenHTML(self):
         return "No hidden HTML for this parameter type"
 
+    def helpHTML(self):
+        if self.helpText:
+            img = "<img src='/static/images/question_mark_icon.gif' />"
+            return "<a href='#' class='modelParameterHelp' data-helpText='%s'>%s</a>" \
+                    % (htmlAttributeEscape(self.helpText), img)
+        else:
+            return ""
+
 class BooleanParameter(ModelParameter):
-    def __init__(self, name, description="", default=False, hidden=False):
+    def __init__(self, name, description="", default=False, hidden=False, helpText=""):
         self.name        = name
         self.description = description
         self.units       = ""
         self.default     = default
         self.hidden      = hidden
+        self.helpText    = helpText
 
         self.setValue(self.default)
 
@@ -77,17 +86,18 @@ class BooleanParameter(ModelParameter):
         else:
             checkedString = ""
 
-        return "<tr><td><label for='%s'>%s</label></td><td><input type='checkbox' name='%s' value='%s' %s/></td></tr>" %\
-                (self.name, self.description, self.name, self.valueString(), checkedString)
+        return "<tr><td><label for='%s'>%s</label></td><td><input type='checkbox' name='%s' value='%s' %s/> %s</td></tr>" %\
+                (self.name, self.description, self.name, self.valueString(), checkedString, self.helpHTML())
 
 class StringParameter(ModelParameter):
-    def __init__(self, name, description="", units="", default=None, hidden=False):
+    def __init__(self, name, description="", units="", default=None, hidden=False, helpText=""):
         self.name        = name
         self.description = description
         self.units       = units
         self.default     = default 
         self.value       = None
         self.hidden      = hidden
+        self.helpText    = helpText
         if default != None:
             self.setValue(self.default)
 
@@ -118,13 +128,13 @@ class StringParameter(ModelParameter):
         if self.hidden:
             return self.hiddenHTML()
 
-        return "<tr><td><label for='%s'>%s</label></td><td><input type='text' name='%s' value='%s'/></td></tr>" %\
-                (self.name, self.description, self.name, self.valueString())
+        return "<tr><td><label for='%s'>%s</label></td><td><input type='text' name='%s' value='%s'/> %s</td></tr>" %\
+                (self.name, self.description, self.name, self.valueString(), self.helpHTML())
 
 
 class RangeParameter(ModelParameter):
     def __init__(self, name, description="", rangeStart=1.0, rangeEnd=10.0, \
-            step=1.0, units="", default=None, hidden=False):
+            step=1.0, units="", default=None, hidden=False, helpText=""):
         self.name        = name
         self.description = description
         self.rangeStart  = rangeStart
@@ -133,6 +143,7 @@ class RangeParameter(ModelParameter):
         self.default     = None
         self.units       = units
         self.hidden      = hidden
+        self.helpText    = helpText
         self.value = None
 
         if default != None:
@@ -199,15 +210,15 @@ class RangeParameter(ModelParameter):
                         <label for='%s'>%s</label> 
                     </td>
                     <td>
-                        <input type='text' class="npsgdRange" name='%s' value='%s' data-rangeStart='%s' data-rangeEnd='%s' data-step='%s' /> %s
+                        <input type='text' class="npsgdRange" name='%s' value='%s' data-rangeStart='%s' data-rangeEnd='%s' data-step='%s' /> %s %s
                         <div class="slider"></div>
                     </td>
                 </tr>
-""" % (self.name, self.description, self.name, self.valueString(), self.rangeStart, self.rangeEnd, self.step, self.units)
+""" % (self.name, self.description, self.name, self.valueString(), self.rangeStart, self.rangeEnd, self.step, self.units, self.helpHTML())
 
 class FloatParameter(ModelParameter):
     def __init__(self, name, description="", rangeStart=None, rangeEnd=None, \
-            step=None, units="", default=None, hidden=False):
+            step=None, units="", default=None, hidden=False, helpText=""):
         self.name        = name
         self.description = description
         self.rangeStart  = rangeStart
@@ -217,6 +228,7 @@ class FloatParameter(ModelParameter):
         self.units       = units
         self.value       = None
         self.hidden      = hidden
+        self.helpText    = helpText
         self.htmlClassBase = "npsgdFloat"
         if default != None:
             self.setValue(self.default)
@@ -267,14 +279,14 @@ class FloatParameter(ModelParameter):
                         </td>
                         <td>
                             <input type='text' class='%sRange' name='%s' value='%s' 
-                            data-rangeStart='%s' data-rangeEnd='%s' data-step='%s' /> %s
+                            data-rangeStart='%s' data-rangeEnd='%s' data-step='%s' /> %s %s
                             <div class="slider"></div>
                         </td>
                     </tr>
-    """ % (self.name, self.description, self.htmlClassBase, self.name, self.valueString(), self.rangeStart, self.rangeEnd, self.step, self.units)
+    """ % (self.name, self.description, self.htmlClassBase, self.name, self.valueString(), self.rangeStart, self.rangeEnd, self.step, self.units, self.helpHTML())
         else:
-            return "<tr><td><label for='%s'>%s</label></td><td><input type='text' class='%s' name='%s' value='%s'/> %s</td></tr>" \
-                % (self.name, self.description, self.htmlClassBase, self.name, self.valueString(), self.units)
+            return "<tr><td><label for='%s'>%s</label></td><td><input type='text' class='%s' name='%s' value='%s'/> %s %s</td></tr>" \
+                % (self.name, self.description, self.htmlClassBase, self.name, self.valueString(), self.units, self.helpHTML())
 
 class IntegerParameter(FloatParameter):
     def __init__(self, *args, **kwargs):
@@ -296,6 +308,9 @@ def matlabEscape(string):
     return string.replace("'", "\\'")\
             .replace("%", "%%")\
             .replace("\\", "\\\\")
+
+def htmlAttributeEscape(string):
+    return string.replace("'", "\\'")
 
 def latexEscape(string):
     return replaceAll(string,

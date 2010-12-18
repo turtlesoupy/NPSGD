@@ -123,4 +123,14 @@ $(function() {
     $("#modelSubmit").validate({
         rules: rules        
     });
+
+
+    //Tooltips (parameter help)
+    $('.modelParameterHelp').each(function(i,e) {
+        var content = $(e).attr('data-helpText');
+        $(e).qtip({
+            content: content
+        });
+        $(e).click(function(){return false;});
+    });
 });

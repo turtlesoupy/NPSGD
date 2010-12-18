@@ -1,0 +1,1 @@
+{{task.full_name}} Job Confirmation Required

@@ -29,6 +29,10 @@ class ModelTask(object):
             setattr(self, param.name, param)
             self.modelParameters.append(param)
 
+        #Recover ordering
+        parameterIndexes = dict((e.name, i) for (i,e) in enumerate(self.__class__.parameters))
+        self.modelParameters.sort(key=lambda x: parameterIndexes[x.name])
+
     def createWorkingDirectory(self):
         try:
             os.makedirs(self.workingDirectory, 0777)
@@ -68,7 +72,7 @@ class ModelTask(object):
         paramRows = "\\\\\n".join(p.asLatexRow() for p in self.modelParameters)
         return """
         \\begin{centering}
-        \\begin{tabular*}{6in}{@{\\extracolsep{\\fill}} c c}
+        \\begin{tabular*}{5in}{@{\\extracolsep{\\fill}} l l}
         \\textbf{Parameter} & \\textbf{Value} \\\\
         \\hline
         %s
@@ -95,7 +99,7 @@ class ModelTask(object):
         pass
 
     def generatePDF(self):
-        latex = config.latexResultTemplate.generate(model_results=self.latexBody())
+        latex = config.latexResultTemplate.generate(model_results=self.latexBody(), task=self)
         logging.info(latex)
 
         texPath = os.path.join(self.workingDirectory, "test_task.tex")
@@ -121,12 +125,12 @@ class ModelTask(object):
 
     def failureEmail(self):
         return Email(self.emailAddress, 
-                config.failureEmailSubject,
+                config.failureEmailSubject.generate(task=self),
                 config.failureEmailTemplate.generate(task=self))
 
     def resultsEmail(self, attachments):
         return Email(self.emailAddress,
-                config.resultsEmailSubject,
+                config.resultsEmailSubject.generate(task=self),
                 config.resultsEmailBodyTemplate.generate(task=self),
                 attachments)
 

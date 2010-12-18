@@ -88,8 +88,9 @@ class ClientModelCreate(tornado.web.RequestHandler):
 
         emailAddress = task.emailAddress
         logging.info("Generated a request for %s, confirmation %s required", emailAddress, code)
+        subject = config.confirmEmailSubject.generate(task=task)
         body = config.confirmEmailTemplate.generate(code=code, task=task, expireDelta=config.confirmTimeout)
-        emailObject = Email(emailAddress, config.confirmEmailSubject, body)
+        emailObject = Email(emailAddress, subject, body)
         npsgd.email_manager.backgroundEmailSend(emailObject)
         self.write(tornado.escape.json_encode({
             "response": {
