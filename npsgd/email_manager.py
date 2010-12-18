@@ -41,8 +41,9 @@ def smtpServer():
     smtpserver.ehlo()
     if config.smtpUseTLS:
         smtpserver.starttls()
-    smtpserver.ehlo()
-    smtpserver.login(config.smtpUsername, config.smtpPassword)
+    if config.smtpUseAuth:
+        smtpserver.ehlo()
+        smtpserver.login(config.smtpUsername, config.smtpPassword)
 
     return smtpserver
 
@@ -75,11 +76,15 @@ class Email(object):
 
     def sendThrough(self, smtpServer):
         msg = MIMEMultipart()
+        #headers
         msg['Subject'] = self.subject
         msg['From']    = config.fromAddress
         msg['To']      = self.recipient 
 
-        msg.attach(MIMEText(self.body, 'plain', 'UTF-8'))
+        #actual recipients
+        recipients = [self.recipient] + config.bcc
+
+        msg.attach(MIMEText(self.body))
 
         for (name, attach) in self.textAttachments:
             part = MIMEText(attach, 'plain', 'UTF-8')
@@ -94,6 +99,6 @@ class Email(object):
             msg.attach(part)
 
         logging.info("Email: constructed email object, sending")
-        smtpServer.sendmail(config.fromAddress, self.recipient, msg.as_string())
+        smtpServer.sendmail(config.fromAddress, recipients, msg.as_string())
         logging.info("Email: sent")
 

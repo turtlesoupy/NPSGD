@@ -3,6 +3,7 @@ import sys
 import logging
 import ConfigParser
 import tornado.template
+import datetime
 
 
 class ConfigError(RuntimeError): pass
@@ -33,8 +34,10 @@ class Config(object):
         self.confirmEmailSubject      = config.get("npsgd", "confirmEmailSubject")
         self.latexResultTemplatePath  = config.get('Latex', 'resultTemplate')
         self.modelTemplatePath        = config.get('npsgd', 'modelTemplatePath')
+        self.modelErrorTemplatePath   = config.get('npsgd', 'modelErrorTemplatePath')
         self.confirmTemplatePath      = config.get('npsgd', 'confirmTemplatePath')
         self.confirmedTemplatePath    = config.get('npsgd', 'confirmedTemplatePath')
+        self.confirmTimeout           = datetime.timedelta(minutes=config.getint('npsgd', 'confirmTimeout'))
         self.resultsEmailSubject      = config.get("npsgd", "resultsEmailSubject")
         self.failureEmailSubject      = config.get("npsgd", "failureEmailSubject")
         self.maxJobFailures           = config.getint("npsgd", "maxJobFailures")
@@ -78,7 +81,9 @@ class Config(object):
         self.smtpServer   = config.get("email", "smtpServer")
         self.smtpPort     = config.getint("email", "smtpPort")
         self.smtpUseTLS   = config.getboolean("email", "smtpUseTLS")
+        self.smtpUseAuth  = config.getboolean("email", "smtpUseAuth")
         self.fromAddress  = config.get("email", "fromAddress")
+        self.bcc          = [e.strip() for e in config.get("email", "bcc").split(",") if e.strip() != ""]
 
 
     def checkIntegrity(self):

@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from npsgd.standalone_task import StandaloneTask 
-from npsgd.model_parameters import StringParameter, IntegerParameter, RangeParameter, FloatParameter
+from npsgd.model_parameters import *
 
 class ABMU(StandaloneTask): 
     short_name = 'abmu_c'
@@ -27,9 +27,9 @@ class ABMU(StandaloneTask):
             FloatParameter('proteinConcentration', description="Protein Concentration",
                 default=53.08714, units="kg/m^3"),
             FloatParameter('celluloseConcentration', description="Cellulose Concentration",
-                default=0.0, units="kg/m^3"),
+                default=53.18708961, units="kg/m^3"),
             FloatParameter('linginConcentration', description="Lingin Concentration",
-                default=59.245619, units="kg/m^3"),
+                default=6.058529380, units="kg/m^3"),
             FloatParameter('chlorophyllAConcentration', description="Chlorophyll A Concentration",
                 default=2.895146, units="kg/m^3"),
             FloatParameter('chlorophyllBConcentration', description="Chlorophyll B Concentration",
@@ -41,7 +41,9 @@ class ABMU(StandaloneTask):
             FloatParameter('epidermisCellCapsAspectRatio', description="Epidermis Cell Caps Aspect Ratio",
                 default=5.0, rangeStart=1.0, rangeEnd=50.0, step=0.5),
             FloatParameter('spongyCellCapsAspectRatio', description="Spongy Cell Caps Aspect Ratio",
-                default=5.0, rangeStart=1.0, rangeEnd=50.0, step=0.5)
+                default=5.0, rangeStart=1.0, rangeEnd=50.0, step=0.5),
+            BooleanParameter('sieveDetourEffects', description="Simulate Sieve and Detour Effects",
+                default=True)
     ]
 
     attachments   = ['spectral_distribution.csv', 'reflectance.png', 'transmittance.png', 'absorptance.png']
@@ -49,16 +51,23 @@ class ABMU(StandaloneTask):
     executable = "/home/tdimson/public_html/npsg/abmb_abmu_cpp/abmu"
 
     def executableParameters(self):
-        return [
+        params = [
             "-d", os.path.join(os.path.dirname(self.executable), "data"),
             "-n", str(self.nSamples.value),
             "-p", str(self.angleOfIncidence.value),
             "-s", str(5), #step
             "-w", str(self.wavelengths.value[0]),
             "-e", str(self.wavelengths.value[1]),
-            "sample.json",
-            "spectral_distribution.csv"
         ]
+
+        if not self.sieveDetourEffects.value:
+            params.append("-v")
+
+        params += ["sample.json",
+                   "spectral_distribution.csv"
+        ]
+        
+        return params
 
     def prepareExecution(self):
         with open(os.path.join(self.workingDirectory, "sample.json"), 'w') as f:

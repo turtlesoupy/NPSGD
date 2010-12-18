@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from npsgd.standalone_task import StandaloneTask 
-from npsgd.model_parameters import StringParameter, IntegerParameter, RangeParameter, FloatParameter
+from npsgd.model_parameters import *
 import abmu_c
 
 
@@ -45,7 +45,9 @@ class ABMB(abmu_c.ABMU):
             FloatParameter('spongyCellCapsAspectRatio', description="Spongy Cell Caps Aspect Ratio",
                 default=5.0, rangeStart=1.0, rangeEnd=50.0, step=0.5),
             FloatParameter('palisadeCellCapsAspectRatio', description="Palisade Cell Caps Aspect Ratio",
-                default=1.0, rangeStart=1.0, rangeEnd=50.0, step=0.5)
+                default=1.0, rangeStart=1.0, rangeEnd=50.0, step=0.5),
+            BooleanParameter('sieveDetourEffects', description="Simulate Sieve and Detour Effects",
+                default=True)
     ]
 
     attachments   = ['spectral_distribution.csv', 'reflectance.png', 'transmittance.png', 'absorptance.png']

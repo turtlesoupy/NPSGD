@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import logging
+import functools
 import threading
 import tornado.web
 import tornado.ioloop
@@ -11,6 +12,7 @@ import tornado.httpclient
 import tornado.httpserver
 import urllib
 from optparse import OptionParser
+from datetime import datetime
 
 from npsgd import model_manager
 from npsgd import model_parameters
@@ -21,10 +23,56 @@ from npsgd.model_task import ModelTask
 from npsgd.model_parameters import ValidationError
 from npsgd.config import config
 
+#This is a simple cache so we don't overload the queue with unnecessary requests
+#just to see it has workers
+lastWorkerCheckSuccess = datetime(1,1,1)
+
 class ClientModelRequest(tornado.web.RequestHandler):
+    @tornado.web.asynchronous
     def get(self, modelName):
+        global lastWorkerCheckSuccess
         model = modelManager.getLatestModel(modelName)
+
+        td = datetime.now() - lastWorkerCheckSuccess
+        checkWorkers = (td.seconds + td.days * 24 * 3600) > config.keepAliveTimeout
+
+        if checkWorkers:
+            #check with queue to see if we have workers
+            http = tornado.httpclient.AsyncHTTPClient()
+            request = tornado.httpclient.HTTPRequest(
+                    "http://%s:%s/client_queue_has_workers" % (config.queueServerAddress, config.queueServerPort),
+                    method="GET")
+            callback = functools.partial(self.queueCallback, model=model)
+            http.fetch(request, callback)
+        else:
+            self.renderModel(model)
+
+    def renderModel(self, model):
         self.render(config.modelTemplatePath, model=model, errorText=None)
+
+    def queueErrorRender(self, errorText):
+        self.render(config.modelErrorTemplatePath, errorText=errorText)
+
+    def queueCallback(self, response, model=None):
+        global lastWorkerCheckSuccess
+        if response.error: 
+            self.queueErrorRender("We are sorry. Our queuing server appears to be down at the moment, please try again later")
+            return
+
+        try:
+            json = tornado.escape.json_decode(response.body)
+            hasWorkers = json["response"]["has_workers"]
+            if hasWorkers:
+                lastWorkerCheckSuccess = datetime.now()
+                self.renderModel(model)
+            else:
+                self.queueErrorRender("We are sorry, our model worker machines appear to be down at the moment. Please try again later")
+                return
+
+        except KeyError:
+            logging.info("Bad response from queue server")
+            self.queueErrorRender("We are sorry. Our queuing server appears to be having issues communicating at the moment, please try again later")
+            return
 
     @tornado.web.asynchronous
     def post(self, modelName):

@@ -49,7 +49,6 @@ class ModelManager(object):
             raise InvalidModelError("Model '%s' has no parameters" % cls.__name__)
 
         if self.hasModel(cls.short_name, version):
-            logging.info("Ignoring already-loaded model '%s' (version '%s')", cls.short_name, version)
             return
 
         cls.version = version
@@ -107,7 +106,7 @@ class ModelScannerThread(threading.Thread):
             self.done.wait(config.modelScanInterval)
             if self.done.isSet():
                 break
-            logging.info("Model scanner thread scanning for models")
+            logging.debug("Model scanner thread scanning for models")
             setupModels()
 
 modelScannerThread = None

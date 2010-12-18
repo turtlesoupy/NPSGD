@@ -37,6 +37,49 @@ class ModelParameter(object):
     def hiddenHTML(self):
         return "No hidden HTML for this parameter type"
 
+class BooleanParameter(ModelParameter):
+    def __init__(self, name, description="", default=False, hidden=False):
+        self.name        = name
+        self.description = description
+        self.units       = ""
+        self.default     = default
+        self.hidden      = hidden
+
+        self.setValue(self.default)
+
+    def setValue(self, value):
+        self.value = bool(value)
+
+    def asMatlabCode(self):
+        if self.value:
+            return "%s=1" % (self.name)
+        else:
+            return "%s=0" % (self.name)
+
+    def asTextRow(self):
+        return "%s: %s %s" % (self.description, self.value, self.units)
+
+    def asLatexRow(self):
+        return "%s & %s %s" % (self.description, latexEscape(self.valueString()), latexEscape(self.units))
+
+    def valueString(self):
+        return str(self.value)
+
+    def hiddenHTML(self):
+        return "<tr><td></td><td><input type='hidden' name='%s' value='%s' /></td></tr>" % (self.name, self.valueString())
+
+    def asHTML(self):
+        if self.hidden:
+            return self.hiddenHTML()
+
+        if self.value:
+            checkedString = "checked='checked'"
+        else:
+            checkedString = ""
+
+        return "<tr><td><label for='%s'>%s</label></td><td><input type='checkbox' name='%s' value='%s' %s/></td></tr>" %\
+                (self.name, self.description, self.name, self.valueString(), checkedString)
+
 class StringParameter(ModelParameter):
     def __init__(self, name, description="", units="", default=None, hidden=False):
         self.name        = name
@@ -58,7 +101,7 @@ class StringParameter(ModelParameter):
         return "%s: %s %s" % (self.description, self.value, self.units)
 
     def asLatexRow(self):
-        return "%s & %s %s" % (self.description, latexEscape(self.value), latexEscape(self.units))
+        return "%s & %s %s" % (self.description, latexEscape(self.valueString()), latexEscape(self.units))
 
     def valueString(self):
         if self.value == None:
@@ -136,9 +179,6 @@ class RangeParameter(ModelParameter):
 
 
     def hiddenHTML(self):
-        if self.hidden:
-            return self.hiddenHTML()
-
         return """
                 <tr>
                     <td></td>
@@ -150,6 +190,9 @@ class RangeParameter(ModelParameter):
 
 
     def asHTML(self):
+        if self.hidden:
+            return self.hiddenHTML()
+
         return """
                 <tr class="rangeParameter">
                     <td>
@@ -198,7 +241,7 @@ class FloatParameter(ModelParameter):
         return "%s: %s %s" % (self.description, self.value, self.units)
 
     def asLatexRow(self):
-        return "%s & %s %s" % (latexEscape(self.description), self.value, latexEscape(self.units))
+        return "%s & %s %s" % (latexEscape(self.description), self.valueString(), latexEscape(self.units))
 
     def valueString(self):
         if self.value == None:
@@ -240,6 +283,7 @@ class IntegerParameter(FloatParameter):
 
     def setValue(self, value):
         self.value = int(value)
+
 
 #Some helpers
 def replaceAll(replacee, replaceList):

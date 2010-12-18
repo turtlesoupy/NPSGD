@@ -7,6 +7,7 @@ import tornado.ioloop
 import tornado.escape
 import tornado.httpserver
 import threading
+from datetime import datetime
 from optparse import OptionParser
 
 import npsgd.email_manager
@@ -65,6 +66,10 @@ class QueueGlobals(object):
         self.taskQueue = TaskQueue()
         self.confirmationMap = ConfirmationMap()
         self.expireWorkerTaskThread = ExpireWorkerTaskThread(self.taskQueue)
+        self.lastWorkerCheckin = datetime(1,1,1)
+
+    def touchWorkerCheckin(self):
+        self.lastWorkerCheckin = datetime.now()
 
     def newTaskId(self):
         with self.idLock:
@@ -83,7 +88,7 @@ class ClientModelCreate(tornado.web.RequestHandler):
 
         emailAddress = task.emailAddress
         logging.info("Generated a request for %s, confirmation %s required", emailAddress, code)
-        body = config.confirmEmailTemplate.generate(code=code, task=task)
+        body = config.confirmEmailTemplate.generate(code=code, task=task, expireDelta=config.confirmTimeout)
         emailObject = Email(emailAddress, config.confirmEmailSubject, body)
         npsgd.email_manager.backgroundEmailSend(emailObject)
         self.write(tornado.escape.json_encode({
@@ -93,9 +98,23 @@ class ClientModelCreate(tornado.web.RequestHandler):
             }    
         }))
 
+class ClientQueueHasWorkers(tornado.web.RequestHandler):
+    def get(self):
+        td = datetime.now() - glb.lastWorkerCheckin
+        hasWorkers = (td.seconds + td.days * 24 * 3600) < config.keepAliveTimeout
+
+        self.write(tornado.escape.json_encode({
+            "response": {
+                "has_workers" : hasWorkers
+            }    
+        }))
+
+
 class ClientConfirm(tornado.web.RequestHandler):
     def get(self, code):
         try:
+            #Expire old confirmations first, just in case
+            glb.confirmationMap.expireConfirmations()
             confirmedRequest = glb.confirmationMap.getRequest(code)
         except KeyError, e:
             raise tornado.web.HTTPError(404)
@@ -108,10 +127,12 @@ class ClientConfirm(tornado.web.RequestHandler):
 
 class WorkerInfo(tornado.web.RequestHandler):
     def get(self):
+        glb.touchWorkerCheckin()
         self.write("{}")
 
 class WorkerTaskKeepAlive(tornado.web.RequestHandler):
     def get(self, taskIdString):
+        glb.touchWorkerCheckin()
         taskId = int(taskIdString)
         logging.info("Got heartbeat for task id '%s'", taskId)
         try:
@@ -126,6 +147,7 @@ class WorkerTaskKeepAlive(tornado.web.RequestHandler):
 
 class WorkerSucceededTask(tornado.web.RequestHandler):
     def get(self, taskIdString):
+        glb.touchWorkerCheckin()
         taskId = int(taskIdString)
         try:
             task = glb.taskQueue.pullProcessingTaskById(taskId)
@@ -142,6 +164,7 @@ class WorkerSucceededTask(tornado.web.RequestHandler):
 
 class WorkerHasTask(tornado.web.RequestHandler):
     def get(self, taskIdString):
+        glb.touchWorkerCheckin()
         taskId = int(taskIdString)
         logging.info("Got 'has task' request for task of id '%d'", taskId)
         if glb.taskQueue.hasProcessingTaskById(taskId):
@@ -155,6 +178,7 @@ class WorkerHasTask(tornado.web.RequestHandler):
 
 class WorkerFailedTask(tornado.web.RequestHandler):
     def get(self, taskIdString):
+        glb.touchWorkerCheckin()
         taskId = int(taskIdString)
         try:
             task = glb.taskQueue.pullProcessingTaskById(taskId)
@@ -183,6 +207,7 @@ class WorkerFailedTask(tornado.web.RequestHandler):
 
 class WorkerTaskRequest(tornado.web.RequestHandler):
     def get(self):
+        glb.touchWorkerCheckin()
         logging.info("Received worker task request")
         if glb.taskQueue.isEmpty():
             self.write(tornado.escape.json_encode({
@@ -200,6 +225,7 @@ def setupQueueApplication():
     return tornado.web.Application([
         (r"/worker_info", WorkerInfo),
         (r"/client_model_create", ClientModelCreate),
+        (r"/client_queue_has_workers", ClientQueueHasWorkers),
         (r"/client_confirm/(\w+)", ClientConfirm),
         (r"/worker_failed_task/(\d+)", WorkerFailedTask),
         (r"/worker_succeed_task/(\d+)", WorkerSucceededTask),

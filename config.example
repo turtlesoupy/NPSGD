@@ -13,6 +13,7 @@ confirmEmailSubject      = NPSG Job Confirmation
 resultsEmailSubject      = Your NPSG Model Results
 failureEmailSubject      = NPSG Job Failed
 modelTemplatePath        = model.html
+modelErrorTemplatePath   = model_error.html
 confirmTemplatePath      = confirm.html
 confirmedTemplatePath    = confirmed.html
 maxJobFailures           = 3
@@ -29,6 +30,8 @@ smtpPassword    = coolguy
 smtpServer      = smtp.gmail.com
 smtpPort        = 587
 smtpUseTLS      = true
+smtpUseAuth     = true
+bcc             = "" ;comma separated
 
 [Latex]
 pdflatexPath   = /usr/bin/pdflatex
