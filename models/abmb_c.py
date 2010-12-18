@@ -129,27 +129,26 @@ class ABMB(abmu_c.ABMU):
             \end{figure}
             
             \newpage
-
             \begin{thebibliography}{9}
             \bibitem{Ba01}
             Baranoski,G.V.G.; Rokne,J.G.; Xu,G.
-            Virtual Spectrophotometric Measurements for Biologically and Physically-Based Rendering
-            The Visual Computer, Volume 17, Issue 8, pp. 506-518, 2001.
+            Virtual spectrophotometric Measurements for biologically and physically-based rendering
+            \textit{The Visual Computer}, Volume 17, Issue 8, pp. 506-518, 2001.
 
             \bibitem{Ba06}
-            Baranoski G.V.G. 
+            Baranoski G.V.G.
             Modeling the interaction of infrared radiation (750 to 2500 nm) with bifacial and unifacial plant leaves
-            Remote Sensing of Environment, 100(3):335-347, 2006
+            \textit{Remote Sensing of Environment}, 100(3):335-347, 2006
 
             \bibitem{Ba07}
             Baranoski G.V.G.; Eng D.
-            An investigation on sieve and detour effects affecting the interaction of collimated and diffuse infrared radiation (750 to 2500 nm) with plant leaves 
-            IEEE Transactions on Geoscience and Remote Sensing, 45 (8):2593-2599, 2007
+            An investigation on sieve and detour effects affecting the interaction of collimated and diffuse infrared radiation (750 to 2500 nm) with plant leaves
+            \textit{IEEE Transactions on Geoscience and Remote Sensing}, 45 (8):2593-2599, 2007
 
             \bibitem{Kr04}
             Krishnaswamy,A.; Baranoski,G.V.G.; Rokne,J.G.
-            Improving the Reliability/Cost Ratio of Goniophotometric Comparisons 
-            Journal of Graphics Tools, Volume 9, Number 3, pp. 1-20, 2004.
+            Improving the reliability/cost ratio of goniophotometric comparisons
+            \textit{Journal of Graphics Tools}, Volume 9, Number 3, pp. 1-20, 2004.
             \end{thebibliography}
 
             \appendix\section{Parameter List}
