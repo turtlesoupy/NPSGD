@@ -120,7 +120,11 @@ class ClientModelRequest(tornado.web.RequestHandler):
 
         paramDict = {}
         for param in model.parameters:
-            argVal = self.get_argument(param.name)
+            try:
+                argVal = self.get_argument(param.name)
+            except tornado.web.HTTPError:
+                argVal = param.nonExistValue()
+
             value = param.withValue(argVal)
             paramDict[param.name] = value.asDict()
 

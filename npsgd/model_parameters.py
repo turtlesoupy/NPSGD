@@ -1,6 +1,7 @@
 import copy
 
 class ValidationError(RuntimeError): pass
+class MissingError(RuntimeError): pass
 
 class ModelParameter(object):
     def __init__(self, name):
@@ -45,6 +46,10 @@ class ModelParameter(object):
         else:
             return ""
 
+    def nonExistValue(self):
+        raise MissingError("Missing value")
+
+
 class BooleanParameter(ModelParameter):
     def __init__(self, name, description="", default=False, hidden=False, helpText=""):
         self.name        = name
@@ -88,6 +93,9 @@ class BooleanParameter(ModelParameter):
 
         return "<tr><td><label for='%s'>%s</label></td><td><input type='checkbox' name='%s' value='%s' %s/> %s</td></tr>" %\
                 (self.name, self.description, self.name, self.valueString(), checkedString, self.helpHTML())
+
+    def nonExistValue(self):
+        return False
 
 class StringParameter(ModelParameter):
     def __init__(self, name, description="", units="", default=None, hidden=False, helpText=""):
