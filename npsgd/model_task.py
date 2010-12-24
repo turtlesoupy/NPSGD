@@ -1,6 +1,8 @@
 import os
 import sys
 import uuid
+import random
+import string
 import logging
 import subprocess
 from email_manager import Email
@@ -17,11 +19,16 @@ class ModelTask(object):
     subtitle    = "Unspecified Subtitle"
     attachments = []
 
-    def __init__(self, emailAddress, taskId, modelParameters={}, failureCount=0):
+    def __init__(self, emailAddress, taskId, modelParameters={}, failureCount=0, visibleId=None):
         self.emailAddress      = emailAddress
         self.taskId            = taskId
         self.failureCount      = failureCount
         self.modelParameters   = []
+        self.visibleId         = visibleId
+        if self.visibleId == None:
+            self.visibleId = "".join(random.choice(string.letters + string.digits)\
+                                    for i in xrange(8))
+
         self.workingDirectory  = "/var/tmp/npsgd/%s" % str(uuid.uuid4())
 
         for k,v in modelParameters.iteritems():
@@ -50,15 +57,17 @@ class ModelTask(object):
     def fromDict(cls, dictionary):
         emailAddress = dictionary["emailAddress"]
         taskId       = dictionary["taskId"]
+        visibleId    = dictionary["visibleId"]
         failureCount = dictionary["failureCount"]
 
         return cls(emailAddress, taskId, failureCount=failureCount,
-                modelParameters=dictionary["modelParameters"])
+                modelParameters=dictionary["modelParameters"], visibleId=visibleId)
 
     def asDict(self):
         return {
             "emailAddress" :   self.emailAddress,
             "taskId":          self.taskId, 
+            "visibleId":       self.visibleId,
             "failureCount":    self.failureCount,
             "modelName":       self.__class__.short_name,
             "modelVersion":    self.__class__.version,

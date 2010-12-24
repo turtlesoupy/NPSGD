@@ -27,6 +27,10 @@ h2.modelSubtitle {
     margin: 10px auto;
 }
 
+.npsgdFloatRange, .npsgdInteger, .npsgdFloat, .npsgdIntegerRange, .npsgdRange {
+    width: 100px;
+}
+
 .finePrint {
     width: 100%;
     text-align: center;

@@ -154,6 +154,8 @@ class ClientConfirmRequest(tornado.web.RequestHandler):
 
         if res == "okay":
             self.render(config.confirmedTemplatePath)
+        elif res == "already_confirmed":
+            self.render(config.alreadyConfirmedTemplatePath)
         else:
             logging.info("Bad response from queue server: %s", res)
             raise tornado.web.HTTPError(500)

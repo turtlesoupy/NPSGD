@@ -1,1 +1,1 @@
-{{task.full_name}} Job Confirmation Required
+{{task.full_name}} Job Confirmation Required [Job {{task.visibleId}}]

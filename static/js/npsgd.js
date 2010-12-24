@@ -9,7 +9,6 @@ jQuery.validator.addMethod(
             var start = parseFloat(tmp[0]);
             var end   = parseFloat(tmp[1]);
 
-
             return !(isNaN(start) || isNaN(end) || start > end || start < params[0] || end > params[1]);
         },
         jQuery.format("Please select a range between {0} and {1}")
@@ -39,26 +38,30 @@ $(function() {
         var min    = parseFloat($(input).attr('data-rangeStart'));
         var max    = parseFloat($(input).attr('data-rangeEnd'));
         var step   = parseFloat($(input).attr('data-end'));
-        var tmp = $(input).val().split("-",2);
-        if(tmp.length == 2) {
-            var startRange = parseFloat(tmp[0]);
-            var endRange   = parseFloat(tmp[1]);
-        } else {
-            var startRange = min;
-            var endRange   = max;
+        function inputParse() {
+            var tmp = $(input).val().split("-",2);
+            if(tmp.length == 2) {
+                return [parseFloat(tmp[0]), parseFloat(tmp[1])];
+            } else {
+                return [min,max];
+            }
         }
+
         $(slider).slider({
             range:  true,
             min:    min,
             max:    max,
             step:   step,
-            values: [startRange, endRange],
+            values: inputParse(),
             slide: function(e, ui) {
                 $(input).val('' + ui.values[0] + '-' + ui.values[1]);
             }
         });
 
         $(input).val($(slider).slider("values", 0) + '-' + $(slider).slider("values", 1));
+        $(input).change(function() {
+            $(slider).slider("values", inputParse());
+        });
     });
 
     $(".floatSliderParameter").each(function() {
@@ -68,22 +71,30 @@ $(function() {
         var max    = parseFloat($(input).attr("data-rangeEnd"));
         var step   = parseFloat($(input).attr("data-step"));
 
-        var startValue = parseFloat($(input).val());
-        if(isNaN(startValue)) {
-            startValue = min;
+        function inputParse() {
+            var ret = parseFloat($(input).val());
+            if(isNaN(ret)) {
+                ret = min;
+            }
+
+            return ret;
         }
+
 
         $(slider).slider({
             min:    min,
             max:    max,
             step:   step,
-            value:  startValue,
+            value:  inputParse(),
             slide: function(e, ui) {
                 $(input).val(ui.value);
             }
         });
 
         $(input).val($(slider).slider( "option", "value"));
+        $(input).change(function() {
+            $(slider).slider("value", inputParse());
+        });
     });
 
 
@@ -108,9 +119,29 @@ $(function() {
     });
 
     $("#modelSubmit").find(".npsgdInteger").each(function (i,e) {
-        rules[e.name] = {
-            integer: true
-        };
+        var r = { integer: true};
+        var rStart = parseFloat($(e).attr("data-rangeStart"));
+        var rEnd   = parseFloat($(e).attr("data-rangeEnd"));
+        if(!isNaN(rStart)) {
+            r['min'] = rStart; 
+        }
+        if(!isNaN(rEnd)) {
+            r['max'] = rStart; 
+        }
+        rules[e.name] = r;
+    });
+
+    $("#modelSubmit").find(".npsgdFloat").each(function (i,e) {
+        var r = {};
+        var rStart = parseFloat($(e).attr("data-rangeStart"));
+        var rEnd   = parseFloat($(e).attr("data-rangeEnd"));
+        if(!isNaN(rStart)) {
+            r['min'] = rStart; 
+        }
+        if(!isNaN(rEnd)) {
+            r['max'] = rStart; 
+        }
+        rules[e.name] = r;
     });
 
     $("#modelSubmit").find(".npsgdRange").each(function (i,e) {
@@ -118,6 +149,7 @@ $(function() {
             rangeParameter: [parseFloat($(e).attr('data-rangeStart')), parseFloat($(e).attr("data-rangeEnd"))]
         };
     });
+
 
 
     $("#modelSubmit").validate({

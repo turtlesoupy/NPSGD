@@ -2,27 +2,28 @@
 npsgBase     = /home/tdimson/public_html/npsg/npsgd
 
 [npsgd]
-htmlTemplateDirectory    = %(npsgBase)s/templates/html/basic
-emailTemplateDirectory   = %(npsgBase)s/templates/email
-latexTemplateDirectory    = %(npsgBase)s/templates/latex
-modelDirectory           = %(npsgBase)s/models
-resultsEmailSubjectPath  = results_email_subject.txt
-resultsEmailBodyPath     = results_email_body.txt
-confirmEmailSubjectPath  = confirm_email_subject.txt
-confirmEmailTemplatePath = confirm_email_body.txt
-failureEmailSubjectPath  = failure_email_subject.txt
-failureEmailTemplatePath = failure_email_body.txt
-modelTemplatePath        = model.html
-modelErrorTemplatePath   = model_error.html
-confirmTemplatePath      = confirm.html
-confirmedTemplatePath    = confirmed.html
-confirmTimeout           = 2880 ;Minutes (2 days)
-maxJobFailures           = 3
-modelScanInterval        = 120
-keepAliveInterval        = 30
-keepAliveTimeout         = 300
-queueServerAddress       = 127.0.0.1
-queueServerPort          = 9000
+htmlTemplateDirectory        = %(npsgBase)s/templates/html/embedded
+emailTemplateDirectory       = %(npsgBase)s/templates/email
+latexTemplateDirectory       = %(npsgBase)s/templates/latex
+modelDirectory               = %(npsgBase)s/models
+resultsEmailSubjectPath      = results_email_subject.txt
+resultsEmailBodyPath         = results_email_body.txt
+confirmEmailSubjectPath      = confirm_email_subject.txt
+confirmEmailTemplatePath     = confirm_email_body.txt
+failureEmailSubjectPath      = failure_email_subject.txt
+failureEmailTemplatePath     = failure_email_body.txt
+modelTemplatePath            = model.html
+modelErrorTemplatePath       = model_error.html
+confirmTemplatePath          = confirm.html
+confirmedTemplatePath        = confirmed.html
+alreadyConfirmedTemplatePath = already_confirmed.html
+confirmTimeout               = 2880 ;Minutes (2 days)
+maxJobFailures               = 3
+modelScanInterval            = 10
+keepAliveInterval            = 30
+keepAliveTimeout             = 300
+queueServerAddress           = 127.0.0.1
+queueServerPort              = 9000
 
 [email]
 smtpUsername    = dummy@you.com

@@ -1,4 +1,5 @@
 import copy
+import logging
 
 class ValidationError(RuntimeError): pass
 class MissingError(RuntimeError): pass
@@ -49,6 +50,65 @@ class ModelParameter(object):
     def nonExistValue(self):
         raise MissingError("Missing value")
 
+
+class SelectParameter(ModelParameter):
+    def __init__(self, name, options=[], description="", default=None, hidden=False, helpText=""):
+        self.name        = name
+
+        if len(options) == 0:
+            raise ValidationError("Select parameter '%s' specified with no options" % name)
+
+        self.options     = options
+        self.description = description
+        self.units       = ""
+
+        if default == None:
+            default = self.options[0]
+
+        self.default     = default
+        self.hidden      = hidden
+        self.helpText    = helpText
+
+        self.setValue(self.default)
+
+    def setValue(self, value):
+        checkVal = str(value)
+        if checkVal not in self.options:
+            raise ValidationError("Attempted to set ComboParameter with invalid value '%s'" % value)
+
+        self.value = value
+
+    def asMatlabCode(self):
+        if self.value:
+            return "%s='%s'" % (self.name, self.value)
+        else:
+            return "%s='%s'" % (self.name, self.value)
+
+    def asTextRow(self):
+        return "%s: %s %s" % (self.description, self.value, self.units)
+
+    def asLatexRow(self):
+        return "%s & %s %s" % (self.description, latexEscape(self.valueString()), latexEscape(self.units))
+
+    def valueString(self):
+        return str(self.value)
+
+    def hiddenHTML(self):
+        return "<tr><td></td><td><input type='hidden' name='%s' value='%s' /></td></tr>" % (self.name, self.valueString())
+
+    def asHTML(self):
+        if self.hidden:
+            return self.hiddenHTML()
+
+        optionSelections = []
+        for option in self.options:
+            if option == self.default:
+                optionSelections.append("<option value='%s' selected='selected'>%s</option>" % (option, option))
+            else:
+                optionSelections.append("<option value='%s'>%s</option>" % (option, option))
+
+        return "<tr><td><label for='%s'>%s</label></td><td><select name='%s'/>%s</select> %s</td></tr>" %\
+                (self.name, self.description, self.name, "".join(optionSelections), self.helpHTML())
 
 class BooleanParameter(ModelParameter):
     def __init__(self, name, description="", default=False, hidden=False, helpText=""):
@@ -227,16 +287,16 @@ class RangeParameter(ModelParameter):
 class FloatParameter(ModelParameter):
     def __init__(self, name, description="", rangeStart=None, rangeEnd=None, \
             step=None, units="", default=None, hidden=False, helpText=""):
-        self.name        = name
-        self.description = description
-        self.rangeStart  = rangeStart
-        self.rangeEnd    = rangeEnd
-        self.step        = step
-        self.default     = default
-        self.units       = units
-        self.value       = None
-        self.hidden      = hidden
-        self.helpText    = helpText
+        self.name         = name
+        self.description  = description
+        self.rangeStart   = rangeStart
+        self.rangeEnd     = rangeEnd
+        self.step         = step
+        self.default      = default
+        self.units        = units
+        self.value        = None
+        self.hidden       = hidden
+        self.helpText     = helpText
         self.htmlClassBase = "npsgdFloat"
         if default != None:
             self.setValue(self.default)
@@ -293,8 +353,8 @@ class FloatParameter(ModelParameter):
                     </tr>
     """ % (self.name, self.description, self.htmlClassBase, self.name, self.valueString(), self.rangeStart, self.rangeEnd, self.step, self.units, self.helpHTML())
         else:
-            return "<tr><td><label for='%s'>%s</label></td><td><input type='text' class='%s' name='%s' value='%s'/> %s %s</td></tr>" \
-                % (self.name, self.description, self.htmlClassBase, self.name, self.valueString(), self.units, self.helpHTML())
+            return "<tr><td><label for='%s'>%s</label></td><td><input type='text' class='%s' name='%s' value='%s' data-rangeStart='%s' data-rangeEnd='%s' data-step='%s'/> %s %s</td></tr>" \
+                % (self.name, self.description, self.htmlClassBase, self.name, self.valueString(), self.rangeStart, self.rangeEnd, self.step, self.units, self.helpHTML())
 
 class IntegerParameter(FloatParameter):
     def __init__(self, *args, **kwargs):
