@@ -1,11 +1,14 @@
 import smtplib
 import Queue
+from email.mime.audio import MIMEAudio
+from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEBase import MIMEBase
 from email.Utils import formatdate
 from email import Encoders
 from threading import Thread
+import mimetypes
 import logging
 import socket
 
@@ -92,9 +95,22 @@ class Email(object):
             msg.attach(part)
 
         for (name, attach) in self.binaryAttachments:
-            part = MIMEBase('application', "octet-stream")
-            part.set_payload(attach)
-            Encoders.encode_base64(part)
+            ctype, encoding = mimetypes.guess_type(name)
+            if ctype is None or encoding is not None:
+                ctype = 'application/octet-stream'
+
+            maintype, subtype = ctype.split('/', 1)
+            if maintype == 'text':
+                part = MIMEText(attach,  _subtype=subtype)
+            elif maintype == 'image':
+                part = MIMEImage(attach, _subtype=subtype)
+            elif maintype == 'audio':
+                part = MIMEAudio(attach, _subtype=subtype)
+            else:
+                part = MIMEBase(maintype, subtype)
+                part.set_payload(attach)
+                Encoders.encode_base64(part)
+
             part.add_header("Content-Disposition", "attachment; filename=%s" % name)
             msg.attach(part)
 

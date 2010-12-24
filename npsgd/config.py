@@ -51,6 +51,8 @@ class Config(object):
         self.emailTemplateDirectory   = config.get("npsgd", "emailTemplateDirectory")
         self.latexTemplateDirectory   = config.get("npsgd", "latexTemplateDirectory")
 
+        self.alreadyConfirmedTemplatePath    = config.get('npsgd', 'alreadyConfirmedTemplatePath')
+
 
         if not os.path.exists(self.htmlTemplateDirectory):
             raise ConfigError("HTML template directory '%s' does not exist" % self.htmlTemplateDirectory)

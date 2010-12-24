@@ -1,1 +1,1 @@
-{{task.full_name}} Job Failed
+{{task.full_name}} Job Failed [Job {{task.visibleId}}]

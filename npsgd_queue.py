@@ -111,14 +111,24 @@ class ClientQueueHasWorkers(tornado.web.RequestHandler):
         }))
 
 
+previouslyConfirmed = set()
 class ClientConfirm(tornado.web.RequestHandler):
     def get(self, code):
+        global previouslyConfirmed
+
         try:
             #Expire old confirmations first, just in case
             glb.confirmationMap.expireConfirmations()
             confirmedRequest = glb.confirmationMap.getRequest(code)
+            previouslyConfirmed.add(code)
         except KeyError, e:
-            raise tornado.web.HTTPError(404)
+            if code in previouslyConfirmed:
+                self.write(tornado.escape.json_encode({
+                    "response": "already_confirmed"
+                }))
+                return
+            else:
+                raise tornado.web.HTTPError(404)
 
         glb.taskQueue.putTask(confirmedRequest)
         self.write(tornado.escape.json_encode({
