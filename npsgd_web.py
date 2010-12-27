@@ -1,4 +1,11 @@
 #!/usr/bin/python
+"""Server for processing client (web-site) requests to NPSGD.
+
+This module is meant to be run as a daemon process in conjunction with npsgd_queue
+and npsgd_web. It acts as an HTTP server that serves up html for models 
+(e.g. http://localhost:8000/model/example) and can be proxied behind a server
+or run as a web service.
+"""
 import os
 import sys
 import time

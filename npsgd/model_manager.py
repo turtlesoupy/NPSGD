@@ -1,3 +1,4 @@
+"""Model plug-in loader with versioning support."""
 import os
 import sys
 import imp
@@ -8,10 +9,10 @@ import logging
 import threading
 from npsgd.config import config
 from model_task import ModelTask
-"""Model plug-in loader with versioning support."""
 
 class InvalidModelError: pass
 class ModelManager(object):
+    """Model plug-in loader with versioning support."""
     def __init__(self):
         self.modelLock = threading.RLock()
         self.models = {}
