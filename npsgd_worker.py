@@ -1,4 +1,11 @@
 #!/usr/bin/python
+"""Worker process for NPSGD.
+
+This script will periodically poll the queue server specified in the config
+file to see if it has any jobs available. When it finds one, it will 
+take it off the queue and begin processing - and communicate success back
+with the user (via e-mail) or failure back to the queue
+"""
 import os
 import sys
 import time
@@ -46,6 +53,9 @@ class TaskKeepAliveThread(Thread):
 class NPSGDWorker(object):
     """Worker class for executing models and sending out result emails.
 
+    This enters a polling loop where the worker will poll the queue for tasks
+    at a fixed interval. When it finds a task, it will decode it into a model, 
+    then process it using the model's "run" method.
     """
     def __init__(self, serverAddress, serverPort):
         self.baseRequest          = "http://%s:%s" % (serverAddress, serverPort)
@@ -72,6 +82,7 @@ class NPSGDWorker(object):
         logging.info("Got initial response from server")
 
     def loop(self):
+        """Main IO loop."""
         logging.info("Entering event loop")
         while True:
             try:
@@ -80,26 +91,27 @@ class NPSGDWorker(object):
                 logging.exception("Unhandled exception in event loop!")
                 
     def handleEvents(self):
-            try:
-                logging.info("Polling %s for tasks" % self.taskRequest)
-                response = urllib2.urlopen(self.taskRequest)
-            except urllib2.URLError, e:
-                self.requestErrors += 1
-                logging.error("Error making worker request to server, attempt #%d", self.requestErrors + 1)
-                time.sleep(self.errorSleepTime)
-                return
+        """Workhorse method of actually making requests to the queue for tasks."""
+        try:
+            logging.info("Polling %s for tasks" % self.taskRequest)
+            response = urllib2.urlopen(self.taskRequest)
+        except urllib2.URLError, e:
+            self.requestErrors += 1
+            logging.error("Error making worker request to server, attempt #%d", self.requestErrors + 1)
+            time.sleep(self.errorSleepTime)
+            return
 
-            try:
-                decodedResponse = json.load(response)
-            except ValueError, e:
-                self.requestErrors += 1
-                logging.error("Error decoding server response, attempt #%d", self.requestErrors +1)
-                time.sleep(self.errorSleepTime)
-                return
+        try:
+            decodedResponse = json.load(response)
+        except ValueError, e:
+            self.requestErrors += 1
+            logging.error("Error decoding server response, attempt #%d", self.requestErrors +1)
+            time.sleep(self.errorSleepTime)
+            return
 
-            self.requestErrors = 0 
-            self.processResponse(decodedResponse)
-            time.sleep(self.requestSleepTime)
+        self.requestErrors = 0 
+        self.processResponse(decodedResponse)
+        time.sleep(self.requestSleepTime)
 
 
 
@@ -125,6 +137,11 @@ class NPSGDWorker(object):
             logging.error("Failed to communicate succeeded task to server %s", self.baseRequest)
 
     def serverHasTask(self, taskId):
+        """Method for ensuring that the queue still recognizes our task id.
+
+        If the queue has expired the task for some reason (i.e. a timeout)
+        this method will return false. Otherwise, it means we can proceed.
+        """
         try:
             logging.info("Making has task request for %s", taskId)
             response = urllib2.urlopen("%s/%s" % (self.hasTaskRequest, taskId))
@@ -144,8 +161,15 @@ class NPSGDWorker(object):
             logging.error("Malformed response from server")
             raise RuntimeError("Malformed response from server for 'has task'")
         
-
     def processTask(self, taskDict):
+        """Handle creation and running of a model and setup heartbeat thread.
+
+        This is the heart of a worker. When we find a model on the queue, this
+        method takes the request and decodes it into something that can be processed.
+        It will then spawn a heartbeat thread that continues to check into the server
+        while we actually enter the models "run" method. From there, it is all up
+        to the model to handle.
+        """
         taskId = None
         if "taskId" in taskDict:
             taskId = taskDict["taskId"]

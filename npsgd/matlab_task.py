@@ -1,3 +1,4 @@
+"""Module containing classes relating to Matlab modelling tasks."""
 import os
 import logging
 import subprocess
@@ -11,7 +12,7 @@ class MatlabTask(ModelTask):
     This class is meant to be the superclass of the user's various
     matlab tasks. It takes parameters from the web interface and
     launches a matlab script with the parameters _directly_
-    available in the matlab namespace.
+    available within Matlab.
     """
 
     abstractModel = "MatlabTask"

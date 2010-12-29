@@ -1,3 +1,4 @@
+"""Module holding all types of model parameters."""
 import copy
 import logging
 
@@ -5,12 +6,25 @@ class ValidationError(RuntimeError): pass
 class MissingError(RuntimeError): pass
 
 class ModelParameter(object):
+    """Model parameter - keeps track of arguments to a model.
+
+    This object has a dual purpose, first to declare the parameters
+    that are actually needed by a module and secondly to keep track
+    of the values of that parameter. To switch between the two, a 
+    call to "withValue" creates a copy of the parameter, this time
+    with a given value.
+
+    Note: this is a lot less screwy than it sounds.
+    """
     def __init__(self, name):
         self.name = name
 
     def withValue(self, value):
-        """Instantiates a copy of the parameter with a value.
-           It may be an idea to rethink this data model later"""
+        """Instantiates a copy of the model parameter with a given value.
+        
+        The setValue method will return a ValidationError if validation fails, so
+        this method implicitly performs parameter verification.
+        """
 
         ret = copy.copy(self)
         ret.setValue(value)
@@ -30,16 +44,28 @@ class ModelParameter(object):
         return self.withValue(d["value"])
 
     def asMatlabCode(self):
+        """Converts an instance of this parameter (with value) into matlab code.
+
+        This is used to inject copies of the parameters __directly__ into the Matlab
+        namespace.
+        """
+
         logging.warning("Unable to convert parameter '%s' to matlab code", self.name)
         return "%s='UNABLE TO CONVERT TO MATLAB';" % self.value
 
     def asHTML(self):
+        """Returns this parameter as HTML."""
+
         return "No HTML for this parameter type"
 
     def hiddenHTML(self):
+        """Returns this parameter as hidden HTML."""
+
         return "No hidden HTML for this parameter type"
 
     def helpHTML(self):
+        """Returns HTML helptext for this parameter (directly for inclusion)"""
+
         if self.helpText:
             img = "<img src='/static/images/question_mark_icon.gif' />"
             return "<a href='#' class='modelParameterHelp' data-helpText='%s'>%s</a>" \
@@ -48,10 +74,18 @@ class ModelParameter(object):
             return ""
 
     def nonExistValue(self):
+        """Gives a value of this parameter does not exist (i.e. in a post request).
+
+        This is mostly useful for the screwy way browsers handle "checkbox" parameters,
+        by simply not sending the key when the checkbox is unchecked.
+        """
+
         raise MissingError("Missing value")
 
 
 class SelectParameter(ModelParameter):
+    """Parameter type for selecting from a fixed set of string options (like a combo box)."""
+
     def __init__(self, name, options=[], description="", default=None, hidden=False, helpText=""):
         self.name        = name
 
@@ -111,6 +145,8 @@ class SelectParameter(ModelParameter):
                 (self.name, self.description, self.name, "".join(optionSelections), self.helpHTML())
 
 class BooleanParameter(ModelParameter):
+    """Parameter type for selecting true/false values."""
+
     def __init__(self, name, description="", default=False, hidden=False, helpText=""):
         self.name        = name
         self.description = description
@@ -158,6 +194,8 @@ class BooleanParameter(ModelParameter):
         return False
 
 class StringParameter(ModelParameter):
+    """Parameter type for selecting string values."""
+
     def __init__(self, name, description="", units="", default=None, hidden=False, helpText=""):
         self.name        = name
         self.description = description
@@ -201,6 +239,8 @@ class StringParameter(ModelParameter):
 
 
 class RangeParameter(ModelParameter):
+    """Parameter type for selecting a range of floats (e.g. 420.4nm-500nm) at a fixed step."""
+
     def __init__(self, name, description="", rangeStart=1.0, rangeEnd=10.0, \
             step=1.0, units="", default=None, hidden=False, helpText=""):
         self.name        = name
@@ -285,6 +325,8 @@ class RangeParameter(ModelParameter):
 """ % (self.name, self.description, self.name, self.valueString(), self.rangeStart, self.rangeEnd, self.step, self.units, self.helpHTML())
 
 class FloatParameter(ModelParameter):
+    """Parameter type for selecting a single float value."""
+
     def __init__(self, name, description="", rangeStart=None, rangeEnd=None, \
             step=None, units="", default=None, hidden=False, helpText=""):
         self.name         = name
@@ -357,6 +399,8 @@ class FloatParameter(ModelParameter):
                 % (self.name, self.description, self.htmlClassBase, self.name, self.valueString(), self.rangeStart, self.rangeEnd, self.step, self.units, self.helpHTML())
 
 class IntegerParameter(FloatParameter):
+    """Parameter type for selecting a single integer value."""
+
     def __init__(self, *args, **kwargs):
         FloatParameter.__init__(self, *args, **kwargs)
         self.htmlClassBase = "npsgdInteger"
@@ -365,7 +409,6 @@ class IntegerParameter(FloatParameter):
         self.value = int(value)
 
 
-#Some helpers
 def replaceAll(replacee, replaceList):
     for find, replace in replaceList:
         replacee = replacee.replace(find, replace)
@@ -373,6 +416,7 @@ def replaceAll(replacee, replaceList):
     return replacee
 
 def matlabEscape(string):
+    """Escapes parameter values (strings usually) for inclusion in a Matlab script."""
     return string.replace("'", "\\'")\
             .replace("%", "%%")\
             .replace("\\", "\\\\")
@@ -381,6 +425,8 @@ def htmlAttributeEscape(string):
     return string.replace("'", "\\'")
 
 def latexEscape(string):
+    """Escapes parameter values for inclusion in LaTeX."""
+
     return replaceAll(string,
             [("\\",r"\textbackslash "),
              ("<", r"\textless "),

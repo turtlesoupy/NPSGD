@@ -1,3 +1,10 @@
+"""Config module for reading an NPSGD config file.
+
+This module is meant to be a singleton. It is shared across all modules
+in the NPSGD package. The particular daemon will call config.loadConfig("...")
+on the config object contained in this module and then we will be ready to go
+thereafter.
+"""
 import os
 import sys
 import logging
@@ -5,13 +12,14 @@ import ConfigParser
 import tornado.template
 import datetime
 
-
 class ConfigError(RuntimeError): pass
 class Config(object):
+    """Internal class for handling NPSGD configs."""
     def __init__(self):
         pass
 
     def setupLogging(self, logPath):
+        """Helper method for setting up logging across daemons."""
         lLevel = logging.DEBUG
         lFormat = format="%(asctime)s - %(levelname)s - %(message)s"
 
@@ -21,6 +29,8 @@ class Config(object):
             logging.basicConfig(filename=logPath, level=lLevel, format=lFormat)
 
     def loadConfig(self, configPath):
+        """Reads config file and loads templates using Tornado's template module."""
+
         config = ConfigParser.SafeConfigParser()
         config.read(configPath)
 
