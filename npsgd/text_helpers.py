@@ -1,3 +1,4 @@
+"""Module containing any functions that are useful for templates."""
 
 def pretty_forward_time_delta(diff):
     day_diff = diff.days

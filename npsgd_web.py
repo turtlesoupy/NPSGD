@@ -35,8 +35,17 @@ from npsgd.config import config
 lastWorkerCheckSuccess = datetime(1,1,1)
 
 class ClientModelRequest(tornado.web.RequestHandler):
+    """HTTP handler for all model related requests."""
+
     @tornado.web.asynchronous
     def get(self, modelName):
+        """Get handler to serve up the html for a specific model.
+        
+        This method will either serve up an error if the queue is down or 
+        the queue has no workers or return a nice view of the given model
+        using the model template. Requests to the queue are done
+        asynchronously to avoid blocking.
+        """
         global lastWorkerCheckSuccess
         model = modelManager.getLatestModel(modelName)
 
@@ -55,12 +64,18 @@ class ClientModelRequest(tornado.web.RequestHandler):
             self.renderModel(model)
 
     def renderModel(self, model):
+        """Render the html associated with a given model object."""
         self.render(config.modelTemplatePath, model=model, errorText=None)
 
     def queueErrorRender(self, errorText):
         self.render(config.modelErrorTemplatePath, errorText=errorText)
 
     def queueCallback(self, response, model=None):
+        """Asynchronous callback from the queue (for checking if it is up, or has workers).
+        
+        This method will actually perform the rendering of the model if things
+        look good.
+        """
         global lastWorkerCheckSuccess
         if response.error: 
             self.queueErrorRender("We are sorry. Our queuing server appears to be down at the moment, please try again later")
@@ -83,6 +98,7 @@ class ClientModelRequest(tornado.web.RequestHandler):
 
     @tornado.web.asynchronous
     def post(self, modelName):
+        """Post handler to actually create a model task with given parameters."""
         modelVersion = self.get_argument("modelVersion")
         model = modelManager.getModel(modelName, modelVersion)
         try:
@@ -107,6 +123,8 @@ class ClientModelRequest(tornado.web.RequestHandler):
         http.fetch(request, self.confirmationNumberCallback)
 
     def confirmationNumberCallback(self, response):
+        """Asynchronous callback when model run is populated to confirmation queue."""
+
         if response.error: raise tornado.web.HTTPError(500)
 
         try:
@@ -140,10 +158,18 @@ class ClientModelRequest(tornado.web.RequestHandler):
 
 
 class ClientBaseRequest(tornado.web.RequestHandler):
+    """Index response handler (e.g. http://localhost:8000): do nothing for now."""
+
     def get(self):
         self.write("Find a model!")
 
 class ClientConfirmRequest(tornado.web.RequestHandler):
+    """HTTP confirmation code handler.
+
+    Requests to this server proxy to the queue for actual confirmation code handling.
+    The queue request is called asynchronously.
+    """
+
     @tornado.web.asynchronous
     def get(self, confirmationCode):
         http = tornado.httpclient.AsyncHTTPClient()

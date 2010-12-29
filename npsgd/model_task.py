@@ -1,3 +1,4 @@
+"""Module containing the main superclass for all models."""
 import os
 import sys
 import uuid
@@ -12,6 +13,13 @@ from config import config
 
 class LatexError(RuntimeError): pass
 class ModelTask(object):
+    """Abstract base class for all user-defined models.
+
+    Users should create models that inherit from this class. It contains _all_ information
+    specific to a given model including parameters, attachments, titles and methods for
+    producing the e-mails with results.
+    """
+
     abstractModel = "ModelTask"
 
     #Every model short implement a subset of these
@@ -47,6 +55,8 @@ class ModelTask(object):
             logging.warning(e)
 
     def parameterType(self, parameterName):
+        """Returns an empty version the parameter class for a given parameter name."""
+
         for pClass in self.__class__.parameters:
             if parameterName == pClass.name:
                 return pClass
@@ -75,9 +85,13 @@ class ModelTask(object):
         }
 
     def latexBody(self):
+        """Returns the body of the LaTeX PDF used to generate result e-mails."""
+
         return "This is a test for %s" % self.emailAddress
 
     def latexParameterTable(self):
+        """Returns LaTeX markup with a table containing the values for all input parameters."""
+
         paramRows = "\\\\\n".join(p.asLatexRow() for p in self.modelParameters)
         return """
         \\begin{centering}
@@ -89,6 +103,8 @@ class ModelTask(object):
         \\end{centering}""" % paramRows
 
     def textParameterTable(self):
+        """Returns an ascii representation of all parameters (e.g. for the body of e-mails)."""
+
         return "\n".join(p.asTextRow() for p in self.modelParameters)
 
     def getAttachments(self):
@@ -102,12 +118,16 @@ class ModelTask(object):
         return attach
 
     def prepareGraphs(self):
+        """A step in the standard model run to prepare output graphs."""
         pass
 
     def prepareExecution(self):
+        """A step in the standard model run to prepare model execution."""
         pass
 
     def generatePDF(self):
+        """Generates a PDF using the LaTeX template, our model's LaTeX body and PDFLatex.""" 
+
         latex = config.latexResultTemplate.generate(model_results=self.latexBody(), task=self)
         logging.info(latex)
 
@@ -133,21 +153,24 @@ class ModelTask(object):
 
 
     def failureEmail(self):
+        """Returns an e-mail object for notifying the user of a failure to execute this model."""
         return Email(self.emailAddress, 
                 config.failureEmailSubject.generate(task=self),
                 config.failureEmailTemplate.generate(task=self))
 
     def resultsEmail(self, attachments):
+        """Returns an e-mail object for yielding a results e-mail for the user."""
         return Email(self.emailAddress,
                 config.resultsEmailSubject.generate(task=self),
                 config.resultsEmailBodyTemplate.generate(task=self),
                 attachments)
 
     def runModel(self):
+        """Performs model-specific steps for execution."""
         logging.warning("Called default run model - this should be overridden")
 
     def run(self):
-        """Runs the model with parameters, the model email object unsent."""
+        """Runs the model with parameters, and returns results email object."""
 
         logging.info("Running default task for '%s'", self.emailAddress)
         self.createWorkingDirectory()

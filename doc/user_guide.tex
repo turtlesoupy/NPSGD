@@ -139,6 +139,31 @@ important to make sure it does not go down as requests could be lost if it does
 it midway through processing. A persistant queue file is a large possibility for
 future development.
 
+\section{Software Layout}
+NPSGD ships in exactly the same way it was developed and isn't easily converted
+into a form that matches the standard UNIX layouts. When you clone the main
+repository for NPSGD, you will see the following files and directories:
+\begin{itemize}
+    \item \mpath{config.example}: An example configuration file for NPSGD
+    \item \mpath{epydoc.cfg}: Config file for generating an HTML representation
+          of the code using epydoc.
+    \item \mpath{LICENSE}: License agreement for distribution
+    \item \mpath{README}: Easy readme guide to NPSGD
+    \item \mpath{npsgd\_web.py}: Web daemon for handling client requests.
+    \item \mpath{npsgd\_queue.py}: Daemon for queueing NPSGD model runs.
+    \item \mpath{npsgd\_worker.py}: Worker for actually processing NPSGD model
+          runs.
+    \item \mpath{doc/}: Directory containing NPSGD documentation.
+    \item \mpath{models/}: Default directory for storing user-defined models
+    \item \mpath{npsgd/}: Helper package containing modules required to run the
+          daemons.
+    \item \mpath{startup/}: Directory containing some sample startup scripts for
+          Ubuntu (must be modified to specify paths correctly).
+    \item \mpath{static/}: Directory containing static files served by the web
+          server (Javascript, css).
+    \item \mpath{templates/}: Directory containing templates used by NPSGD
+\end{itemize}
+
 
 \section{Development Environment}
 Since NPSGD consists of so many moving parts, creating a quick development

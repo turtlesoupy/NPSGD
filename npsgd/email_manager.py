@@ -1,3 +1,4 @@
+"""NPSGD e-mail related module for blocking/non-blocking sends."""
 import smtplib
 import Queue
 from email.mime.audio import MIMEAudio
@@ -11,13 +12,12 @@ from threading import Thread
 import mimetypes
 import logging
 import socket
-
 from config import config
 
 class EmailSendError(RuntimeError): pass
 
-
 def blockingEmailSend(email):
+    """Attempt to send an e-mail synchronously, reporting an error if we fail."""
     try:
         s = smtpServer()
     except socket.gaierror, e:
@@ -32,6 +32,12 @@ def blockingEmailSend(email):
 
 email_manager_thread = None
 def backgroundEmailSend(email):
+    """Attempt to send an e-mail asynchronously, spawning a background thread if necesarry.
+
+    This method sends an e-mail in the background using an e-mail thread. Note that
+    this has a side effect of actually spawning an e-mail thread if none exists already.
+    """
+
     global email_manager_thread
     if email_manager_thread == None:
         email_manager_thread = EmailManagerThread()
@@ -51,6 +57,8 @@ def smtpServer():
     return smtpserver
 
 class EmailManagerThread(Thread):
+    """Thread for sending e-mail in the background (using a queue of e-mails)."""
+
     def __init__(self):
         Thread.__init__(self)
         self.daemon = True
@@ -60,6 +68,7 @@ class EmailManagerThread(Thread):
         self.queue.put(email)
 
     def run(self):
+        """Blocks on the queue until it has an e-mail in it, then send it."""
         while True:
             try:
                 email = self.queue.get(True)
@@ -70,6 +79,11 @@ class EmailManagerThread(Thread):
                 self.queue.put(email)
 
 class Email(object):
+    """Actual e-mail object containing all information needed to send an e-mail.
+
+    The e-mail object includes the recipient, subject, body, attachments and
+    also contains a method to send through a given smtp server."""
+
     def __init__(self, recipient, subject, body, binaryAttachments=[], textAttachments=[]):
         self.recipient         = recipient
         self.subject           = subject
@@ -78,6 +92,7 @@ class Email(object):
         self.textAttachments   = textAttachments
 
     def sendThrough(self, smtpServer):
+        """Sends this e-mail through a given smtp server (blocking)."""
         msg = MIMEMultipart()
         #headers
         msg['Subject'] = self.subject

@@ -1,4 +1,4 @@
-"""Model plug-in loader with versioning support."""
+"""Model (plug-in) loader with versioning support."""
 import os
 import sys
 import imp
@@ -12,7 +12,12 @@ from model_task import ModelTask
 
 class InvalidModelError: pass
 class ModelManager(object):
-    """Model plug-in loader with versioning support."""
+    """Object for keeping track of all models available to the NPSGD daemons.
+    
+    This essentially takes the form of hash from (modelName, modelVersion) to 
+    the actual model classes (from modules). This class is thread safe.
+    """
+
     def __init__(self):
         self.modelLock = threading.RLock()
         self.models = {}
@@ -39,12 +44,16 @@ class ModelManager(object):
             return (name, version) in self.models
 
     def addModel(self, cls, version):
+        """Add a model to th hash, provided it is well formed."""
         #Ignore abstract models
         if not hasattr(cls, 'abstractModel') or cls.abstractModel == cls.__name__:
             return
 
         if not hasattr(cls, 'short_name'):
             raise InvalidModelError("Model '%s' lacks a short_name" % cls.__name__)
+
+        if not hasattr(cls, 'full_name'):
+            raise InvalidModelError("Model '%s' lacks a full_name" % cls.__name__)
 
         if not hasattr(cls, 'parameters'):
             raise InvalidModelError("Model '%s' has no parameters" % cls.__name__)
@@ -66,13 +75,19 @@ class ModelManager(object):
 
 
 def loadMembers(mod, version):
+    """Steps through all classes in a given module and loads those that are NPSGD models."""
     global modelManager
     for name, obj in inspect.getmembers(mod):
         if inspect.isclass(obj) and obj.__module__ == mod.__name__ and issubclass(obj, ModelTask):
             modelManager.addModel(obj, version)
 
 def setupModels():
-    """Attempts to do the initial load of all models. Must be called on script startup"""
+    """Attempts to do the initial load of all models. Must be called on script startup.
+    
+    This method scans the the model directory and finds all python scripts available.
+    It computes a hash of the scripts (i.e. a 'version') then attempts to load all
+    NPSGD models held within, using the version previously configured.
+    """
     if config.modelDirectory not in sys.path:
         sys.path.append(config.modelDirectory)
     t = 0
@@ -112,6 +127,7 @@ class ModelScannerThread(threading.Thread):
 
 modelScannerThread = None
 def startScannerThread():
+    """Start the dynamic model loader, loading models as they are modified."""
     global modelScannerThread
     modelScannerThread = ModelScannerThread()
     modelScannerThread.start()

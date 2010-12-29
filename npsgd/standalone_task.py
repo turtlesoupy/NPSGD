@@ -1,3 +1,4 @@
+"""Module containing abstract base class for standalone models."""
 import os
 import logging
 import subprocess
@@ -17,12 +18,20 @@ class StandaloneTask(ModelTask):
     executable    = "ls"
 
     def executableParameters(self):
+        """Returns parameters to the underlying executable as a Python list."""
+
         return [
                 "-al",
                 "*"
         ]
 
     def runModel(self):
+        """Spawns a python subprocess of 'executable' class variable and executes.
+
+        This method is meant to run standalone binaries of models. It stores the
+        stdout/stderr in class variables called self.stdout and self.stderr.
+        """
+
         exe = self.__class__.executable
 
         logging.info("Launching subprocess '%s %s'", exe, " ".join(self.executableParameters()))

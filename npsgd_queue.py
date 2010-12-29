@@ -1,4 +1,11 @@
 #!/usr/bin/python
+"""Queue server for npsgd modelling tasks.
+
+The queue server is the data backend for NPSGD. It listens to both workers and
+the web interface. The web interface populates it with requests while the workers
+poll for requests and pull them off the queue. Additionally, the queue is 
+responsible for sending out confirmation code e-mail messages.
+"""
 import os
 import sys
 import logging
@@ -18,8 +25,6 @@ from npsgd.task_queue import TaskQueue
 from npsgd.task_queue import TaskQueueException
 from npsgd.confirmation_map import ConfirmationMap
 from npsgd.model_manager import modelManager
-
-"""Queue server for npsgd modelling tasks."""
 
 class ExpireWorkerTaskThread(threading.Thread):
     """Task Expiration Thread
@@ -60,6 +65,8 @@ class ExpireWorkerTaskThread(threading.Thread):
                     self.taskQueue.putTask(task)
 
 class QueueGlobals(object):
+    """Like a C-Struct for a few globals needed in the queue."""
+
     def __init__(self):
         self.idCounter = 0
         self.idLock = threading.RLock()
@@ -79,7 +86,17 @@ class QueueGlobals(object):
 glb = QueueGlobals()
 
 class ClientModelCreate(tornado.web.RequestHandler):
+    """HTTP handler for clients creating a model request (before confirmation)."""
+
     def post(self):
+        """Post handler for model requests from the web daemon.
+
+        Attempts to build a model from its known models (essentially performing
+        parameter verification) then places a request in the queue if it succeeds.
+        Additionally, it will send out an e-mail to the user for confirmation of
+        the request
+        """
+
         task_json = tornado.escape.json_decode(self.get_argument("task_json"))
         model = modelManager.getModel(task_json["modelName"], task_json["modelVersion"])
         task  = model.fromDict(task_json)
@@ -100,6 +117,12 @@ class ClientModelCreate(tornado.web.RequestHandler):
         }))
 
 class ClientQueueHasWorkers(tornado.web.RequestHandler):
+    """Request handler for the web daemon to check if workers are available.
+
+    We keep track of the last time workers checked into the queue in order
+    to ensure that all requests can be processed.
+    """
+
     def get(self):
         td = datetime.now() - glb.lastWorkerCheckin
         hasWorkers = (td.seconds + td.days * 24 * 3600) < config.keepAliveTimeout
@@ -113,6 +136,11 @@ class ClientQueueHasWorkers(tornado.web.RequestHandler):
 
 previouslyConfirmed = set()
 class ClientConfirm(tornado.web.RequestHandler):
+    """HTTP handler for clients confirming a model request.
+    
+    This handler moves requests from the confirmation map to the general
+    request queue for processing.
+    """
     def get(self, code):
         global previouslyConfirmed
 
@@ -137,11 +165,20 @@ class ClientConfirm(tornado.web.RequestHandler):
 
 
 class WorkerInfo(tornado.web.RequestHandler):
+    """HTTP handler for workers checking into the queue."""
+
     def get(self):
         glb.touchWorkerCheckin()
         self.write("{}")
 
 class WorkerTaskKeepAlive(tornado.web.RequestHandler):
+    """HTTP handler for workers pinging the queue while working on a task.
+    
+    Having this request makes sure that we don't time out any jobs that 
+    are currently being handled by some worker. If a worker goes down,
+    we will put the job back into the queue because this request won't have
+    been made.
+    """
     def get(self, taskIdString):
         glb.touchWorkerCheckin()
         taskId = int(taskIdString)
@@ -157,6 +194,12 @@ class WorkerTaskKeepAlive(tornado.web.RequestHandler):
         self.write("{}")
 
 class WorkerSucceededTask(tornado.web.RequestHandler):
+    """HTTP handler for workers telling the queue that they have succeeded processing.
+
+    After this request, the queue no longer needs to keep track of the job in any way
+    and declares it complete.
+    """
+
     def get(self, taskIdString):
         glb.touchWorkerCheckin()
         taskId = int(taskIdString)
@@ -174,6 +217,16 @@ class WorkerSucceededTask(tornado.web.RequestHandler):
         }))
 
 class WorkerHasTask(tornado.web.RequestHandler):
+    """HTTP handler for workers ensuring that a job still exists.
+
+    This handler helps eliminate certain race conditions in NPSGD. Before a 
+    worker sends an e-mail with job results, it checks back with the queue to
+    make sure that the job hasn't already been handler by another worker
+    (this could happen if the queue declares that the first worker had timed out).
+    If there is no task with that id still in the processing list then 
+    an e-mail being sent out would be a duplicate.
+    """
+
     def get(self, taskIdString):
         glb.touchWorkerCheckin()
         taskId = int(taskIdString)
@@ -188,6 +241,12 @@ class WorkerHasTask(tornado.web.RequestHandler):
             }))
 
 class WorkerFailedTask(tornado.web.RequestHandler):
+    """HTTP handler for workers reporting failure to complete a job.
+    
+    Upon failure, we will either recycle the request into the queue or we will
+    report a failure (with an e-mail message to the user).
+    """
+
     def get(self, taskIdString):
         glb.touchWorkerCheckin()
         taskId = int(taskIdString)
@@ -217,6 +276,7 @@ class WorkerFailedTask(tornado.web.RequestHandler):
 
 
 class WorkerTaskRequest(tornado.web.RequestHandler):
+    """HTTP handler for workers grabbings tasks off the queue."""
     def get(self):
         glb.touchWorkerCheckin()
         logging.info("Received worker task request")
