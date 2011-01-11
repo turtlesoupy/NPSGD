@@ -99,6 +99,7 @@ class Config(object):
         self.smtpUseAuth  = config.getboolean("email", "smtpUseAuth")
         self.fromAddress  = config.get("email", "fromAddress")
         self.bcc          = [e.strip() for e in config.get("email", "bcc").split(",") if e.strip() != ""]
+        self.cc           = [e.strip() for e in config.get("email", "cc").split(",") if e.strip() != ""]
 
 
     def checkIntegrity(self):

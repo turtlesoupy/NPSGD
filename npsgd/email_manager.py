@@ -95,12 +95,14 @@ class Email(object):
         """Sends this e-mail through a given smtp server (blocking)."""
         msg = MIMEMultipart()
         #headers
-        msg['Subject'] = self.subject
-        msg['From']    = config.fromAddress
         msg['To']      = self.recipient 
+        if len(config.cc) > 0:
+            msg['Cc'] = ",".join(config.cc)
+        msg['From']    = config.fromAddress
+        msg['Subject'] = self.subject
 
         #actual recipients
-        recipients = [self.recipient] + config.bcc
+        recipients = [self.recipient] + config.cc + config.bcc
 
         msg.attach(MIMEText(self.body))
 
@@ -129,7 +131,7 @@ class Email(object):
             part.add_header("Content-Disposition", "attachment; filename=%s" % name)
             msg.attach(part)
 
-        logging.info("Email: constructed email object, sending")
+        logging.info("Email: constructed email object, sending to %s", ", ".join(recipients))
         smtpServer.sendmail(config.fromAddress, recipients, msg.as_string())
         logging.info("Email: sent")
 

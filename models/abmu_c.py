@@ -16,13 +16,13 @@ class ABMU(StandaloneTask):
     parameters = [
             IntegerParameter('nSamples', description="Number of samples", 
                 rangeStart=1000, rangeEnd=100000, step=1, default=10000),
-            RangeParameter('wavelengths', description="Wavelengths",
-                rangeStart=400, rangeEnd=2500, step=5, units="nm", helpText="Output will generated in steps of 5nm."),
+            RangeParameter('wavelengths', description="Wavelength Range",
+                rangeStart=400, rangeEnd=2500, step=5, units="nm", helpText="Modeled spectral curves will be generated in steps of 5nm."),
             FloatParameter('angleOfIncidence', description="Incident angle",
                 default=8, rangeStart=0, rangeEnd=90, step=0.1, units="degrees"),
             SelectParameter('surfaceOfIncidence', description="Surface of incidence",
-                options=["Adaxial", "Abaxial"], default="Abaxial",
-                helpText="Adaxial is the top epidermal layer of the leaf, abaxial is the bottom epidermal layer of the leaf."),
+                options=["Adaxial", "Abaxial"], default="Adaxial",
+                helpText="The adaxial surface corresponds to the top epidermal layer of the leaf, while the abaxial surface corresponds to the bottom epidermal layer."),
             FloatParameter('wholeLeafThickness', description="Leaf thickness",
                 default=2.04e-4, units="m"),
             FloatParameter('mesophyllPercentage', description="Mesophyll percentage",
@@ -58,7 +58,7 @@ class ABMU(StandaloneTask):
     executable = "/home/tdimson/public_html/npsg/abmb_abmu_cpp/abmu"
 
     def executableParameters(self):
-        if self.surfaceOfIncidence.value == "Adaxial":
+        if self.surfaceOfIncidence.value == "Abaxial":
             angleIn = 180 - self.angleOfIncidence.value
         else:
             angleIn = self.angleOfIncidence.value
@@ -174,7 +174,7 @@ class ABMU(StandaloneTask):
 
     def latexBody(self):
         return r"""
-            These are the results of your model run of \textbf{ABM-U} for the 
+            These are the results of your run of the \textbf{ABM-U} model provided by the 
             Natural Phenomenon Simulation Group (NPSG) at the University of Waterloo.
 
             The ABM-U employs an algorithmic Monte Carlo formulation 
@@ -204,21 +204,21 @@ class ABMU(StandaloneTask):
             \begin{figure}
             \begin{centering}
             \includegraphics[width=5in]{reflectance}
-            \caption{Directional-hemispherical reflectance}
+            \caption{Directional-hemispherical reflectance.}
             \end{centering}
             \end{figure}
 
             \begin{figure}
             \begin{centering}
             \includegraphics[width=5in]{transmittance}
-            \caption{Directional-hemispherical transmittance}
+            \caption{Directional-hemispherical transmittance.}
             \end{centering}
             \end{figure}
 
             \begin{figure}
             \begin{centering}
             \includegraphics[width=5in]{absorptance}
-            \caption{Directional-hemispherical absorptance}
+            \caption{Directional-hemispherical absorptance.}
             \end{centering}
             \end{figure}
 
@@ -245,9 +245,11 @@ class ABMU(StandaloneTask):
             \textit{Journal of Graphics Tools}, Volume 9, Number 3, pp. 1-20, 2004.
             \end{thebibliography}
 
+            \newpage
             \appendix
             \section{Parameter List}
             %s
+            \newpage
             \section{Data List}
             %s
 """ % (self.latexParameterTable(), self.latexDataTable())

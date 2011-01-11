@@ -33,7 +33,9 @@ smtpServer      = smtp.gmail.com
 smtpPort        = 587
 smtpUseTLS      = true
 smtpUseAuth     = true
-bcc             = "" ;comma separated
+#The following are comma separated if you wish multiple recipients
+cc              = 
+bcc             = 
 
 [Latex]
 pdflatexPath   = /usr/bin/pdflatex

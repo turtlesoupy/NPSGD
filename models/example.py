@@ -3,6 +3,7 @@ from npsgd.model_parameters import StringParameter, IntegerParameter, RangeParam
 
 class ExampleModel(MatlabTask): 
     short_name = 'example'
+    full_name  = 'Example Model'
     subtitle   = 'A demo model'
 
     parameters = [
