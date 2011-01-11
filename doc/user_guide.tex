@@ -5,7 +5,7 @@
 \usepackage[letterpaper, hmargin=1.25in, vmargin=1.5in]{geometry}
 
 \title{NPSGD User Guide}
-\author{Thomas Dimson}
+\author{Thomas Dimson\\Natural Phenomenon Simulation Group (NPSG)\\David R. Cheriton School of Computer Science\\University of Waterloo, Canada}
 
 \setlength{\parskip}{0.5\baselineskip}
 \newcommand{\mpath}[1]{\texttt{#1}}
@@ -24,15 +24,16 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-    NPSGD is an online framework that makes it easy for scientists to expose
+    NPSGD is an online framework that makes it easy for researchers to exhibit
     their models online. This document provides an general overview of how the
-    system works with some administrative tips along the way. Notably, it does
+    system works along with some administration pointers. Notably, it does
     not talk about the inner workings of how to create models as this is
     documented in the guide called ``Adding a new model to NPSGD''.
 \end{abstract}
 \tableofcontents
 
 \section{System Requirements}
+\label{sec:requirements}
 A basic configuration will require:
 \begin{itemize}
     \item Python 2.5 or higher \url{http://www.python.org/}
@@ -49,12 +50,12 @@ A basic configuration will require:
 \subsection{Daemons}
 NPSGD is a distributed system which communicates internally and externally via
 http. One of the design goals of the system was to allow multiple machines to
-perform the function of worker so as not to overload any particular system. To
-fascilitate this, the framework is split into three daemons:
+perform as workers to avoid to overloading any particular system. To
+facilitate this, the framework is split into three daemons:
 \begin{itemize}
     \item \texttt{npsgd\_web}: The frontend to NPSGD. The job of this daemon is
     to communicate with all external clients over http. Since no state is kept
-    inside the daemon, you can have as many frontends as desired (though one
+    inside the daemon, there is no limit to the number of frontends that exist (though one
     should be sufficient unless you are under heavy load). By default, a
     client visiting \url{http://localhost:8000} will hit this daemon.
 
@@ -89,10 +90,10 @@ would be something like this:
     \item User visits the model site via \url{http://localhost:8000/models/example},
     which is served using \texttt{npsgd\_web}.
 
-    \item User submits a request for the example model, \texttt{npsgd\_web} makes
-    a request to \texttt{npsgd\_queue} to submit a confirmation code.
+    \item User submits a request for the example model, \texttt{npsgd\_web}
+    acquires a confirmation code from \texttt{npsgd\_queue}.
 
-    \item \texttt{npsgd\_queue} e-mails a confirmation code to the user's e-mail
+    \item \texttt{npsgd\_queue} e-mails the same confirmation code to the user's e-mail
     address.
     
     \item User clicks the link in the e-mail, usually something like
@@ -102,89 +103,91 @@ would be something like this:
     \texttt{npsgd\_queue}. At this point the model request is ready to be
     processed.
 
-    \item \texttt{npsgd\_worker} polls the queue for a task. Since there is a
-    task, it receives a task response.
+    \item \texttt{npsgd\_worker} has been polling the queue for a task. Since
+    now there is a task, it receives a task response.
 
-    \item \texttt{npsgd\_worker} prepares execution, spawns a subprocess to open
-    up the model run. 
+    \item \texttt{npsgd\_worker} prepares execution, spawns a subprocess to run
+    the underlying model.
     
     \item Model execution completes. \texttt{npsgd\_worker} creates a \LaTeX
     document with the results.
 
     \item \LaTeX document and other attachments are sent to the user's e-mail.
-    \texttt{npsgd\_worker} tells the queue that it has executed successfully.
+    \texttt{npsgd\_worker} tells the \texttt{npsgd\_queue} that it has executed successfully.
 \end{enumerate}
 
 \subsection{Fault Tolerance}
 NPSGD has been designed to be fault tolerant. Whenever a web request is made,
 \texttt{npsgd\_web} will check with the queue to ensure it is up and that it has
 workers on the line that have polled for a request recently. If one of these
-conditions is not met, a simple error message is displayed to the requestor.
+conditions is not met, a simple error message is displayed to the requester.
 
 When processing a task, \texttt{npsgd\_workers} communicate back to the queue
-with a heartbeat request to make sure that the queue knows that the worker is
-still alive. If this heartbeat has not been heard for a long while, the queue
-daemon will put the request back into the queue.
+with a keepalive request to make sure that the queue knows that the worker is
+still alive. If this keepalive has not been heard for a long while, the queue
+daemon will put the request back into the queue and increase its failure count.
 
 All requests are tried for a fixed number of times before a complete failure (by
 default, the queue will retry a request three times before declaring it failed).
 Upon failure, an error message is e-mailed to the user.
 
-If the e-mail system is ever down, NPSGD will keep trying to send e-mails out
+If the e-mail system is ever down, \texttt{npsgd\_queue} will keep trying to send e-mails out
 until they have successfully completed.
 
-One particular ``gotcha'' at this point is that the queue server is not
-persistant: all requests are kept in memory. This makes it particularly
+One particular caveat at this point is that the queue server is not
+persistent: all requests are kept in memory. This makes it particularly
 important to make sure it does not go down as requests could be lost if it does
-it midway through processing. A persistant queue file is a large possibility for
+it midway through processing. A persistent queue file is a large possibility for
 future development.
 
 \section{Software Layout}
-NPSGD ships in exactly the same way it was developed and isn't easily converted
+NPSGD ships in exactly the same way it was developed and is not easily converted
 into a form that matches the standard UNIX layouts. When you clone the main
 repository for NPSGD, you will see the following files and directories:
 \begin{itemize}
-    \item \mpath{config.example}: An example configuration file for NPSGD
+    \item \mpath{config.example}: An example configuration file for NPSGD.
     \item \mpath{epydoc.cfg}: Config file for generating an HTML representation
           of the code using epydoc.
-    \item \mpath{LICENSE}: License agreement for distribution
-    \item \mpath{README}: Easy readme guide to NPSGD
+    \item \mpath{LICENSE}: License agreement for distribution.
+    \item \mpath{README}: Easy readme guide to NPSGD.
     \item \mpath{npsgd\_web.py}: Web daemon for handling client requests.
     \item \mpath{npsgd\_queue.py}: Daemon for queueing NPSGD model runs.
     \item \mpath{npsgd\_worker.py}: Worker for actually processing NPSGD model
           runs.
     \item \mpath{doc/}: Directory containing NPSGD documentation.
-    \item \mpath{models/}: Default directory for storing user-defined models
+    \item \mpath{models/}: Default directory for storing user-defined models.
     \item \mpath{npsgd/}: Helper package containing modules required to run the
           daemons.
     \item \mpath{startup/}: Directory containing some sample startup scripts for
           Ubuntu (must be modified to specify paths correctly).
     \item \mpath{static/}: Directory containing static files served by the web
           server (Javascript, css).
-    \item \mpath{templates/}: Directory containing templates used by NPSGD
+    \item \mpath{templates/}: Directory containing templates used by NPSGD.
 \end{itemize}
 
 
 \section{Development Environment}
-Since NPSGD consists of so many moving parts, creating a quick development
-environment can be quite a task. First of all, ensure that all the system
-requirements are installed. After that, you will want to clone NPSGD from the
-main development site and then make a custom copy of the config file.
+Since NPSGD consists of so many components, creating a quick development
+environment may seem overwhelming. First of all, ensure that all the 
+requirements mentioned in Section \ref{sec:requirements} are installed. 
+After that, clone NPSGD from the
+main development site and create a custom copy of the config file:
 \begin{verbatim}
 git clone git://github.com/cosbynator/NPSGD.git
 cp config.example config.cfg
 \end{verbatim}
 
-You will need to edit the config file to make a few changes, most notably:
+The config file will need a few changes to run, notably:
 \begin{itemize}
-    \item Change \texttt{npsgbase} to point at your development directory
+    \item Change \texttt{npsgbase} to point at the directory that you cloned the
+    software into (e.g., \texttt{/home/tdimson/npsgd}).
     \item Change \texttt{pdflatexPath} to point at your \texttt{pdflatex}
     binary.
     \item Change the \texttt{email} section to specify a valid
     username/password. The defaults are approximately set up for a gmail
     account (obviously with an invalid username/password).
     \item Change \texttt{matlabPath} if you will be testing/editing matlab
-    models
+    models.
 \end{itemize}
 
 After completing these sections you will be able to run all three daemons on a
@@ -205,12 +208,12 @@ does not cover the \textit{implementation} of custom models (see ``Adding a new
 model to NPSGD'' for that). Still, it is important to understand how they fit
 into the system.
 
-Models are really just Python files that inherit from \mclass{ModelTask} in
+Models are Python files that inherit from \mclass{ModelTask} in
 order to provide complete flexibility for underlying implementation. These
 python files often act as wrappers to existing models that are implemented in
-some other language (we have models implemented in both Matlab and C++). Just
-because they are Python files does not force the implementation to be in Python:
-Python just acts as a facilitator between NPSGD and the underyling model. 
+some other language (we have models implemented in both Matlab and C++). 
+This does not force the model implementation to be in Python;
+Python acts as a facilitator between NPSGD and the underyling model. 
 
 Each daemon is configured to monitor the model directory, by default under
 \mpath{models/}. Python files in this directory act as ``plugins'' to the system
@@ -220,8 +223,8 @@ are imported into the system. When importing, a hash of the file is used to tag
 the model with a ``version''. Duplicate versions of models are ignored (not
 imported into the system), while new versions are stored. Old versions are
 retained in the system in case there are any queued requests that are still
-acting on the old version. For this reason, it is important to reload the page
-after updating any models.
+acting on the old version. For this reason, it is important for the developer to 
+reload the page after updating any models if they wish to test the new version.
 
 Models are self-contained: they have all the information necessary for the
 queue, web and worker daemons to operate. In particular, they contain the
@@ -231,16 +234,17 @@ particular parameter set. The code for the models must be shared
 across the daemons: this is done manually, or via a NFS mount.
 
 \section{Templates}
-Templates have many purposes in NPSGD:
-\begin{enumerate}
-    \item To create the HTML that is served by the web daemon
-    \item To create the e-mail sent by the queue and worker daemons
-    \item To create \LaTeX markup to send results to the user
-\end{enumerate}
+Templates are used in many different ways within NPSGD:
+\begin{itemize}
+    \item To create the HTML that is served by the web daemon.
+    \item To create the e-mail sent by the queue and worker daemons.
+    \item To create \LaTeX markup to send results to the user.
+\end{itemize}
 
-All templates for npsgd are stored in the \mpath{templates/} subdirectory. This
-is meant to be user defined. The default templates shipped with NPGSD are quite
-specific to our own models.
+All templates for NPSGD are stored in the \mpath{templates/} subdirectory. This
+is meant to be user defined. The default templates shipped with NPGSD are 
+specific to the models within the Natural Phenomenon Simulation Group and are
+intended to be used as a guide for other NPSGD users.
 
 Templates use a syntax created for the Tornado web server. This syntax is
 documented at the Tornado site: \url{http://www.tornadoweb.org/}, under
@@ -248,27 +252,27 @@ templates.
 
 \subsection{HTML Templates}
 NPSGD ships with two sets of html templates, one for an embedded site (served
-directly without things like title tags), and one for a basic site. These
+directly without entities like title tags), and one for a basic site. These
 templates are used by the web daemon to display html directly to the user. Both are
 available under the \mpath{templates/html/} subdirectory. These files contain:
 \begin{enumerate}
     \item \texttt{base.html}: Template that all other templates inherit from.
-    Could contain things like HTML headers.
+    It could contain entities like HTML headers and footers.
 
     \item \texttt{model.html}: The template that displays a model to the user.
 
-    \item \texttt{model\_error.html}: The template that shows an error when a
-    something goes wrong in the model.
+    \item \texttt{model\_error.html}: The template that displays a message when
+    an error occurs in the model.
 
-    \item \texttt{confirm.html}: Template that shows after a model request has
+    \item \texttt{confirm.html}: Template that displays after a model request has
     been made (displays that an e-mail will be dispatched to the user).
 
-    \item \texttt{confirmed.html}: Template that shows after a confirmation code
+    \item \texttt{confirmed.html}: Template that displays after a confirmation code
     has been entered correctly.
 
-    \item \texttt{already\_confirmed.html}: Template that shows after a
-    confirmation code has been entered for a second time. This displays a
-    message saying that the model will not be rerun.
+    \item \texttt{already\_confirmed.html}: Template that displays after a
+    confirmation code has been entered for a second time (displays a
+    message saying that the model will not be rerun).
 \end{enumerate}
 
 \subsection{Email Templates}
@@ -276,15 +280,15 @@ Emails are used as communication to the user after a request has been performed
 via HTML. Each template comes in two parts: one for the email subject, and one
 for the email body. The naming convention is ``name\_body.txt'' for body and
 ``name\_subject.txt'' for subject. In particular, these templates are available:
-\begin{enumerate}
-    \item \texttt{results\_email}: The email used to display model run results
-    \item \texttt{failure\_email}: The email used to notify the user that we
-    could not complete a model request.
+\begin{itemize}
+    \item \texttt{results\_email}: The email used to display model run results.
+    \item \texttt{failure\_email}: The email used to notify the user when a
+    certain error threshold has been met during across model execution attempts.
     \item \texttt{confirm\_email}: The email used to communicate the
     confirmation code for a particular model request.
-\end{enumerate}
+\end{itemize}
 
-\subsection{LaTeX Templates}
+\subsection{\LaTeX Templates}
 There is only one LaTeX template, namely \mpath{result\_template.text}. This is
 used to declare all the packages required for a model results PDF. Inside, there
 is an empty variable where the details of a model run will go. Models themselves
@@ -296,20 +300,21 @@ customize the in-browser behaviour. All static files are available in the
 \mpath{static/} subdirectory.
 
 \subsection{Javascript}
-NPSGD uses a lot of javascript to do paramater verification and provide UI
-widgets for the user. In the \mpath{static/js} subdirectory, you will find
+NPSGD uses Javascript to handle parameter verification and provide UI
+widgets for the user. The following are located in the \mpath{static/js}
+subdirectory:
 \begin{enumerate}
-    \item \texttt{npsgd.js}: our particular javascript files
+    \item \texttt{npsgd.js}: Our particular javascript files.
     \item \texttt{jquery-version.min.js}: JQuery, a javascript library that
     makes writing javascript simpler: \url{http://jquery.com/}
     \item \texttt{jquery.qtip.min.js}: A library for creating popup tooltips.
     This is used for model's helper text.
     \url{http://craigsworks.com/projects/qtip/}
     \item \texttt{jquery-ui-version.min.js}: JQuery UI, a set of UI widgets for
-    JQuery: \url{http://jqueryui.com/}. This is used to give a nice user
-    experience for things like sliders and range selectors.
-    \item \texttt{jquery.validate.min.js}: JQuery validation plugin. We use this
-    to perform parameter verification in client side, before requests are sent
+    JQuery: \url{http://jqueryui.com/}. This is used to provide an interface for 
+    widgets such as sliders and range selectors.
+    \item \texttt{jquery.validate.min.js}: JQuery validation plugin. This is
+    used to perform parameter verification in client side, before requests are sent
     to the server:
     \url{http://bassistance.de/jquery-plugins/jquery-plugin-validation/}
 \end{enumerate}
@@ -326,6 +331,6 @@ templates. These are in the \mpath{static/css} subdirectory.
 
 \subsection{Images}
 Finally, there are some images that NPSGD needs to display available in the
-\mpath{static/images} subdirectory. These should mostly be self explanitory. 
+\mpath{static/images} subdirectory. 
 
 \end{document}
