@@ -10,6 +10,10 @@ resultsEmailSubjectPath      = results_email_subject.txt
 resultsEmailBodyPath         = results_email_body.txt
 confirmEmailSubjectPath      = confirm_email_subject.txt
 confirmEmailTemplatePath     = confirm_email_body.txt
+confirmationFailedEmailSubjectPath   = confirmation_failed_subject.txt
+confirmationFailedEmailTemplatePath  = confirmation_failed_body.txt
+lostTaskEmailSubjectPath     = lost_task_email_subject.txt
+lostTaskEmailTemplatePath    = lost_task_email_body.txt
 failureEmailSubjectPath      = failure_email_subject.txt
 failureEmailTemplatePath     = failure_email_body.txt
 modelTemplatePath            = model.html
@@ -24,6 +28,7 @@ keepAliveInterval            = 30
 keepAliveTimeout             = 300
 queueServerAddress           = 127.0.0.1
 queueServerPort              = 9000
+requestSecret                = quiteabigsecret
 
 [email]
 smtpUsername    = dummy@you.com

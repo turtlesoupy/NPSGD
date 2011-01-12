@@ -80,6 +80,7 @@ class ModelTask(object):
             "visibleId":       self.visibleId,
             "failureCount":    self.failureCount,
             "modelName":       self.__class__.short_name,
+            "modelFullName":   self.__class__.full_name,
             "modelVersion":    self.__class__.version,
             "modelParameters": dict((p.name, p.asDict()) for p in self.modelParameters)
         }

@@ -37,12 +37,10 @@
 A basic configuration will require:
 \begin{itemize}
     \item Python 2.5 or higher \url{http://www.python.org/}
-    \item Facebook's Tornado Web server for Python
-    \url{http://www.tornadoweb.org/}
+    \item The Tornado Web server for Python \url{http://www.tornadoweb.org/}
     \item \LaTeX distribution of some form.
-    \item If you are going to use some Matlab scripts, some version of Matlab is
-    required
-    \item UNIX-like operating system. Cygwin may work but has not been tested.
+    \item UNIX-like operating system. NPSGD has been tested on Ubuntu Linux 9.04
+    and 10.04 but should work on other Linux or BSD based platforms.
 \end{itemize}
 
 
@@ -64,7 +62,9 @@ facilitate this, the framework is split into three daemons:
     confirmations, and to distribute jobs to worker machines. There can only
     ever be one queue within an NPSGD system. By default, it runs on port 9000
     but should not be accessed externally (in particular, it should be
-    firewalled off).
+    firewalled off). The queue is a listener for other requests with the 
+    \texttt{npsgd\_web} and \texttt{npsgd\_queue} daemons communicating directly
+    with the queue via http over port 9000.
 
     \item \texttt{npsgd\_worker}: The model processor of NPSGD. The job of these
     daemons are to poll the queue for model requests and process them.

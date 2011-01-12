@@ -1,0 +1,9 @@
+Hello,
+
+We regret to inform you that your confirmation code {{code}} has expired early
+because we have uploaded new versions of models to the server. Feel free to
+resubmit at any time.
+
+Natural Phenomenon Simulation Group
+University of Waterloo
+

@@ -44,7 +44,7 @@ class TaskKeepAliveThread(Thread):
 
             try:
                 logging.info("Making heartbeat request '%s'", self.keepAliveRequest)
-                response = urllib2.urlopen("%s/%s" % (self.keepAliveRequest, self.taskId))
+                response = urllib2.urlopen("%s/%s?secret=%s" % (self.keepAliveRequest, self.taskId, config.requestSecret))
             except urllib2.URLError, e:
                 logging.error("Heartbeat failed to make connection to %s", self.keepAliveRequest)
                 fails += 1
@@ -74,7 +74,7 @@ class NPSGDWorker(object):
 
     def getServerInfo(self):
         try:
-            response = urllib2.urlopen(self.infoRequest)
+            response = urllib2.urlopen("%s?secret=%s" % (self.infoRequest, config.requestSecret))
         except urllib2.URLError, e:
             logging.error("Failed to make initial connection to %s", self.baseRequest)
             return
@@ -94,7 +94,7 @@ class NPSGDWorker(object):
         """Workhorse method of actually making requests to the queue for tasks."""
         try:
             logging.info("Polling %s for tasks" % self.taskRequest)
-            response = urllib2.urlopen(self.taskRequest)
+            response = urllib2.urlopen("%s?secret=%s" % (self.taskRequest, config.requestSecret))
         except urllib2.URLError, e:
             self.requestErrors += 1
             logging.error("Error making worker request to server, attempt #%d", self.requestErrors + 1)
@@ -125,14 +125,14 @@ class NPSGDWorker(object):
     def notifyFailedTask(self, taskId):
         try:
             logging.info("Notifying server of failed task with id %s", taskId)
-            response = urllib2.urlopen("%s/%s" % (self.failedTaskRequest, taskId))
+            response = urllib2.urlopen("%s/%s?secret=%s" % (self.failedTaskRequest, taskId, config.requestSecret))
         except urllib2.URLError, e:
             logging.error("Failed to communicate failed task to server %s", self.baseRequest)
 
     def notifySucceedTask(self, taskId):
         try:
             logging.info("Notifying server of succeeded task with id %s", taskId)
-            response = urllib2.urlopen("%s/%s" % (self.succeedTaskRequest, taskId))
+            response = urllib2.urlopen("%s/%s?secret=%s" % (self.succeedTaskRequest, taskId, config.requestSecret))
         except urllib2.URLError, e:
             logging.error("Failed to communicate succeeded task to server %s", self.baseRequest)
 
@@ -144,7 +144,7 @@ class NPSGDWorker(object):
         """
         try:
             logging.info("Making has task request for %s", taskId)
-            response = urllib2.urlopen("%s/%s" % (self.hasTaskRequest, taskId))
+            response = urllib2.urlopen("%s/%s?secret=%s" % (self.hasTaskRequest, taskId, config.requestSecret))
         except urllib2.URLError, e:
             logging.error("Failed to make has task request to server %s", self.baseRequest)
             raise RuntimeError(e)
@@ -191,7 +191,8 @@ class NPSGDWorker(object):
                 resultsEmail = taskObject.run()
                 logging.info("Model finished running, sending email")
                 if self.serverHasTask(taskObject.taskId):
-                    npsgd.email_manager.blockingEmailSend(resultsEmail)
+                    #FIXME before pushing
+                    #npsgd.email_manager.blockingEmailSend(resultsEmail)
                     logging.info("Email sent, model is 100% complete!")
                     self.notifySucceedTask(taskObject.taskId)
                 else:

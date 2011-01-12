@@ -8,7 +8,7 @@ import threading
 class TaskQueueException(RuntimeError): pass
 
 class TaskQueue(object):
-    """Main queue object.
+    """Main queue object (thread safe).
 
     Contains two internal queues: one for actually holding requests, and one
     for holding the tasks that are currently being processed. This way, if 
@@ -19,6 +19,14 @@ class TaskQueue(object):
         self.requests        = []
         self.processingTasks = []
         self.lock = threading.RLock()
+
+    def allRequests(self):
+        """Returns all requests in processing or requests queue.
+        
+        This is really only useful for serializing the queue to disk."""
+        with self.lock:
+            return self.requests + self.processingTasks
+
 
     def putTask(self, request):
         """Puts a model into the queue for worker processing."""

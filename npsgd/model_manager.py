@@ -39,6 +39,16 @@ class ModelManager(object):
         with self.modelLock:
             return self.models[(name, version)]
 
+    def getModelFromTaskDict(self, taskDict):
+        name    = taskDict["modelName"]
+        version = taskDict["modelVersion"]
+        with self.modelLock:
+            if (name, version) not in self.models:
+                raise InvalidModelError("Invalid model-version combination %s-%s" % (name, version))
+            model = self.models[(name, version)]
+
+        return model.fromDict(taskDict)
+
     def hasModel(self, name, version):
         with self.modelLock:
             return (name, version) in self.models

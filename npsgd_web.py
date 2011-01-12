@@ -56,7 +56,7 @@ class ClientModelRequest(tornado.web.RequestHandler):
             #check with queue to see if we have workers
             http = tornado.httpclient.AsyncHTTPClient()
             request = tornado.httpclient.HTTPRequest(
-                    "http://%s:%s/client_queue_has_workers" % (config.queueServerAddress, config.queueServerPort),
+                    "http://%s:%s/client_queue_has_workers?secret=%s" % (config.queueServerAddress, config.queueServerPort, config.requestSecret),
                     method="GET")
             callback = functools.partial(self.queueCallback, model=model)
             http.fetch(request, callback)
@@ -118,7 +118,9 @@ class ClientModelRequest(tornado.web.RequestHandler):
         request = tornado.httpclient.HTTPRequest(
                 "http://%s:%s/client_model_create" % (config.queueServerAddress, config.queueServerPort),
                 method="POST",
-                body=urllib.urlencode({"task_json": tornado.escape.json_encode(task.asDict())}))
+                body=urllib.urlencode({
+                    "secret": config.requestSecret,
+                    "task_json": tornado.escape.json_encode(task.asDict())}))
 
         http.fetch(request, self.confirmationNumberCallback)
 
@@ -174,7 +176,8 @@ class ClientConfirmRequest(tornado.web.RequestHandler):
     def get(self, confirmationCode):
         http = tornado.httpclient.AsyncHTTPClient()
         request = tornado.httpclient.HTTPRequest(
-                "http://%s:%s/client_confirm/%s" % (config.queueServerAddress, config.queueServerPort, confirmationCode))
+                "http://%s:%s/client_confirm/%s?secret=%s" % (config.queueServerAddress, config.queueServerPort, \
+                        confirmationCode, config.requestSecret))
 
         logging.info("Asyncing a confirmation: '%s'", confirmationCode)
         http.fetch(request, self.confirmationCallback)

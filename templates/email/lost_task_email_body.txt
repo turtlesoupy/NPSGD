@@ -1,0 +1,10 @@
+Hi,
+
+This email address recently requested a model run for the NPSG group at the university of
+Waterloo. Unfortunately there was an error because we have uploaded a new version of 
+and were unable to synchronize your request.
+
+You can try to rerun again at any time.
+
+Natural Phenomenon Simulation Group
+University of Waterloo

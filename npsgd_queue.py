@@ -14,6 +14,7 @@ import tornado.ioloop
 import tornado.escape
 import tornado.httpserver
 import threading
+import shelve
 from datetime import datetime
 from optparse import OptionParser
 
@@ -25,6 +26,104 @@ from npsgd.task_queue import TaskQueue
 from npsgd.task_queue import TaskQueueException
 from npsgd.confirmation_map import ConfirmationMap
 from npsgd.model_manager import modelManager
+
+glb = None
+"""Queue globals object - assigned at startup."""
+
+class QueueGlobals(object):
+    """Queue state objects along with disk serialization mechanisms for them."""
+
+    def __init__(self, shelve):
+        self.shelve          = shelve
+        self.shelveLock      = threading.RLock() 
+        self.idLock          = threading.RLock()
+        self.taskQueue       = TaskQueue()
+        self.confirmationMap = ConfirmationMap()
+        if shelve.has_key("idCounter"):
+            self.idCounter = shelve["idCounter"]
+        else:
+            self.idCounter = 0
+
+        self.loadDiskTaskQueue()
+        self.loadConfirmationMap()
+        self.expireWorkerTaskThread = ExpireWorkerTaskThread(self.taskQueue)
+        self.lastWorkerCheckin = datetime(1,1,1)
+
+    def loadDiskTaskQueue(self):
+        if not self.shelve.has_key("taskQueue"):
+            logging.info("Unable to read task queue from disk, starting fresh")
+            return
+
+        logging.info("Reading task queue from disk")
+        readTasks   = 0
+        failedTasks = 0
+        taskDicts = self.shelve["taskQueue"]
+        for taskDict in taskDicts:
+            try:
+                task = modelManager.getModelFromTaskDict(taskDict)
+            except model_manager.InvalidModelError, e:
+                emailAddress = taskDict["emailAddress"]
+                subject = config.lostTaskEmailSubject.generate(full_name=taskDict["modelFullName"], 
+                        visibleId=taskDict["visibleId"])
+                body = config.lostTaskEmailTemplate.generate()
+                emailObject = Email(emailAddress, subject, body)
+                npsgd.email_manager.backgroundEmailSend(Email(emailAddress, subject, body))
+                failedTasks += 1
+                continue
+            
+            readTasks += 1
+            self.taskQueue.putTask(task)
+
+        logging.info("Read %s tasks, failed while reading %s tasks", readTasks, failedTasks)
+
+    def loadConfirmationMap(self):
+        if not self.shelve.has_key("confirmationMap"):
+            logging.info("Unable to read confirmation map from disk, starting fresh")
+            return
+
+        logging.info("Reading confirmation map from disk")
+        confirmationMapEntries = self.shelve["confirmationMap"]
+
+        readCodes = 0
+        failedCodes = 0
+        for code, taskDict in confirmationMapEntries.iteritems():
+            try:
+                task = modelManager.getModelFromTaskDict(taskDict)
+            except model_manager.InvalidModelError, e:
+                emailAddress = taskDict["emailAddress"]
+                subject = config.confirmationFailedEmailSubject.generate(full_name=taskDict["modelFullName"], 
+                        visibleId=taskDict["visibleId"])
+                body = config.confirmationFailedEmailBody.generate(code=code)
+                emailObject = Email(emailAddress, subject, body)
+                npsgd.email_manager.backgroundEmailSend(Email(emailAddress, subject, body))
+                failedCodes += 1
+                continue
+
+            readCodes += 1
+            self.confirmationMap.putRequestWithCode(task, code)
+
+        logging.info("Read %s codes, failed while reading %s codes", readCodes, failedCodes)
+
+
+    def syncShelve(self):
+        with self.shelveLock:
+            self.shelve["taskQueue"]        = [e.asDict() \
+                    for e in self.taskQueue.allRequests()]
+            self.shelve["confirmationMap"]  = dict( (code, task.asDict())\
+                    for (code, task) in self.confirmationMap.getRequestsWithCodes())
+
+            with self.idLock:
+                self.shelve["idCounter"] = self.idCounter
+
+        logging.info("Synced queue and confirmation map to disk")
+
+    def touchWorkerCheckin(self):
+        self.lastWorkerCheckin = datetime.now()
+
+    def newTaskId(self):
+        with self.idLock:
+            self.idCounter += 1
+            return self.idCounter
 
 class ExpireWorkerTaskThread(threading.Thread):
     """Task Expiration Thread
@@ -64,28 +163,15 @@ class ExpireWorkerTaskThread(threading.Thread):
                     task.taskId = glb.newTaskId()
                     self.taskQueue.putTask(task)
 
-class QueueGlobals(object):
-    """Like a C-Struct for a few globals needed in the queue."""
+class QueueRequestHandler(tornado.web.RequestHandler):
+    def checkSecret(self):
+        if self.get_argument("secret") == config.requestSecret:
+            return True
+        else:
+            self.write(tornado.escape.json_encode({"error": "bad_secret"}))
+            return False
 
-    def __init__(self):
-        self.idCounter = 0
-        self.idLock = threading.RLock()
-        self.taskQueue = TaskQueue()
-        self.confirmationMap = ConfirmationMap()
-        self.expireWorkerTaskThread = ExpireWorkerTaskThread(self.taskQueue)
-        self.lastWorkerCheckin = datetime(1,1,1)
-
-    def touchWorkerCheckin(self):
-        self.lastWorkerCheckin = datetime.now()
-
-    def newTaskId(self):
-        with self.idLock:
-            self.idCounter += 1
-            return self.idCounter
-
-glb = QueueGlobals()
-
-class ClientModelCreate(tornado.web.RequestHandler):
+class ClientModelCreate(QueueRequestHandler):
     """HTTP handler for clients creating a model request (before confirmation)."""
 
     def post(self):
@@ -97,9 +183,11 @@ class ClientModelCreate(tornado.web.RequestHandler):
         the request
         """
 
+        if not self.checkSecret():
+            return
+
         task_json = tornado.escape.json_decode(self.get_argument("task_json"))
-        model = modelManager.getModel(task_json["modelName"], task_json["modelVersion"])
-        task  = model.fromDict(task_json)
+        task = modelManager.getModelFromTaskDict(task_json)
         task.taskId = glb.newTaskId()
         code = glb.confirmationMap.putRequest(task)
 
@@ -108,7 +196,9 @@ class ClientModelCreate(tornado.web.RequestHandler):
         subject = config.confirmEmailSubject.generate(task=task)
         body = config.confirmEmailTemplate.generate(code=code, task=task, expireDelta=config.confirmTimeout)
         emailObject = Email(emailAddress, subject, body)
+        #FIXME BEFORE PUSHING
         npsgd.email_manager.backgroundEmailSend(emailObject)
+        glb.syncShelve()
         self.write(tornado.escape.json_encode({
             "response": {
                 "task" : task.asDict(),
@@ -116,7 +206,7 @@ class ClientModelCreate(tornado.web.RequestHandler):
             }    
         }))
 
-class ClientQueueHasWorkers(tornado.web.RequestHandler):
+class ClientQueueHasWorkers(QueueRequestHandler):
     """Request handler for the web daemon to check if workers are available.
 
     We keep track of the last time workers checked into the queue in order
@@ -124,6 +214,9 @@ class ClientQueueHasWorkers(tornado.web.RequestHandler):
     """
 
     def get(self):
+        if not self.checkSecret():
+            return
+
         td = datetime.now() - glb.lastWorkerCheckin
         hasWorkers = (td.seconds + td.days * 24 * 3600) < config.keepAliveTimeout
 
@@ -135,7 +228,7 @@ class ClientQueueHasWorkers(tornado.web.RequestHandler):
 
 
 previouslyConfirmed = set()
-class ClientConfirm(tornado.web.RequestHandler):
+class ClientConfirm(QueueRequestHandler):
     """HTTP handler for clients confirming a model request.
     
     This handler moves requests from the confirmation map to the general
@@ -143,6 +236,9 @@ class ClientConfirm(tornado.web.RequestHandler):
     """
     def get(self, code):
         global previouslyConfirmed
+
+        if not self.checkSecret():
+            return
 
         try:
             #Expire old confirmations first, just in case
@@ -159,19 +255,23 @@ class ClientConfirm(tornado.web.RequestHandler):
                 raise tornado.web.HTTPError(404)
 
         glb.taskQueue.putTask(confirmedRequest)
+        glb.syncShelve()
         self.write(tornado.escape.json_encode({
             "response": "okay"
         }))
 
 
-class WorkerInfo(tornado.web.RequestHandler):
+class WorkerInfo(QueueRequestHandler):
     """HTTP handler for workers checking into the queue."""
 
     def get(self):
+        if not self.checkSecret():
+            return
+
         glb.touchWorkerCheckin()
         self.write("{}")
 
-class WorkerTaskKeepAlive(tornado.web.RequestHandler):
+class WorkerTaskKeepAlive(QueueRequestHandler):
     """HTTP handler for workers pinging the queue while working on a task.
     
     Having this request makes sure that we don't time out any jobs that 
@@ -180,6 +280,8 @@ class WorkerTaskKeepAlive(tornado.web.RequestHandler):
     been made.
     """
     def get(self, taskIdString):
+        if not self.checkSecret():
+            return
         glb.touchWorkerCheckin()
         taskId = int(taskIdString)
         logging.info("Got heartbeat for task id '%s'", taskId)
@@ -193,7 +295,7 @@ class WorkerTaskKeepAlive(tornado.web.RequestHandler):
 
         self.write("{}")
 
-class WorkerSucceededTask(tornado.web.RequestHandler):
+class WorkerSucceededTask(QueueRequestHandler):
     """HTTP handler for workers telling the queue that they have succeeded processing.
 
     After this request, the queue no longer needs to keep track of the job in any way
@@ -201,6 +303,8 @@ class WorkerSucceededTask(tornado.web.RequestHandler):
     """
 
     def get(self, taskIdString):
+        if not self.checkSecret():
+            return
         glb.touchWorkerCheckin()
         taskId = int(taskIdString)
         try:
@@ -212,11 +316,12 @@ class WorkerSucceededTask(tornado.web.RequestHandler):
             }))
             return
 
+        glb.syncShelve()
         self.write(tornado.escape.json_encode({
             "status": "okay"
         }))
 
-class WorkerHasTask(tornado.web.RequestHandler):
+class WorkerHasTask(QueueRequestHandler):
     """HTTP handler for workers ensuring that a job still exists.
 
     This handler helps eliminate certain race conditions in NPSGD. Before a 
@@ -228,6 +333,9 @@ class WorkerHasTask(tornado.web.RequestHandler):
     """
 
     def get(self, taskIdString):
+        if not self.checkSecret():
+            return
+
         glb.touchWorkerCheckin()
         taskId = int(taskIdString)
         logging.info("Got 'has task' request for task of id '%d'", taskId)
@@ -240,7 +348,7 @@ class WorkerHasTask(tornado.web.RequestHandler):
                 "response": "no"
             }))
 
-class WorkerFailedTask(tornado.web.RequestHandler):
+class WorkerFailedTask(QueueRequestHandler):
     """HTTP handler for workers reporting failure to complete a job.
     
     Upon failure, we will either recycle the request into the queue or we will
@@ -248,6 +356,9 @@ class WorkerFailedTask(tornado.web.RequestHandler):
     """
 
     def get(self, taskIdString):
+        if not self.checkSecret():
+            return
+
         glb.touchWorkerCheckin()
         taskId = int(taskIdString)
         try:
@@ -275,9 +386,12 @@ class WorkerFailedTask(tornado.web.RequestHandler):
         }))
 
 
-class WorkerTaskRequest(tornado.web.RequestHandler):
+class WorkerTaskRequest(QueueRequestHandler):
     """HTTP handler for workers grabbings tasks off the queue."""
     def get(self):
+        if not self.checkSecret():
+            return
+
         glb.touchWorkerCheckin()
         logging.info("Received worker task request")
         if glb.taskQueue.isEmpty():
@@ -291,21 +405,8 @@ class WorkerTaskRequest(tornado.web.RequestHandler):
                 "task": task.asDict()
             }))
 
-
-def setupQueueApplication():
-    return tornado.web.Application([
-        (r"/worker_info", WorkerInfo),
-        (r"/client_model_create", ClientModelCreate),
-        (r"/client_queue_has_workers", ClientQueueHasWorkers),
-        (r"/client_confirm/(\w+)", ClientConfirm),
-        (r"/worker_failed_task/(\d+)", WorkerFailedTask),
-        (r"/worker_succeed_task/(\d+)", WorkerSucceededTask),
-        (r"/worker_has_task/(\d+)",     WorkerHasTask),
-        (r"/worker_keep_alive_task/(\d+)", WorkerTaskKeepAlive),
-        (r"/worker_work_task", WorkerTaskRequest)
-    ])
-
 def main():
+    global glb
     parser = OptionParser()
     parser.add_option("-c", "--config", dest="config",
                         help="Config file", default="config.cfg")
@@ -321,12 +422,27 @@ def main():
     model_manager.setupModels()
     model_manager.startScannerThread()
 
-    queueHTTP = tornado.httpserver.HTTPServer(setupQueueApplication())
-    queueHTTP.listen(options.port)
-    logging.info("NPSGD Queue Booted up, serving on port %d", options.port)
-    print >>sys.stderr, "NPSGD queue server listening on %d" % options.port
+    queueShelve  = shelve.open(config.queueFile)
+    try:
+        glb = QueueGlobals(queueShelve)
+        queueHTTP = tornado.httpserver.HTTPServer(tornado.web.Application([
+            (r"/worker_info", WorkerInfo),
+            (r"/client_model_create", ClientModelCreate),
+            (r"/client_queue_has_workers", ClientQueueHasWorkers),
+            (r"/client_confirm/(\w+)", ClientConfirm),
+            (r"/worker_failed_task/(\d+)", WorkerFailedTask),
+            (r"/worker_succeed_task/(\d+)", WorkerSucceededTask),
+            (r"/worker_has_task/(\d+)",     WorkerHasTask),
+            (r"/worker_keep_alive_task/(\d+)", WorkerTaskKeepAlive),
+            (r"/worker_work_task", WorkerTaskRequest)
+        ]))
+        queueHTTP.listen(options.port)
+        logging.info("NPSGD Queue Booted up, serving on port %d", options.port)
+        print >>sys.stderr, "NPSGD queue server listening on %d" % options.port
+        tornado.ioloop.IOLoop.instance().start()
+    finally:
+        queueShelve.close()
 
-    tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == "__main__":
     main()
