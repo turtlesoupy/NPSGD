@@ -1,4 +1,7 @@
 #!/usr/bin/python
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
 """Worker process for NPSGD.
 
 This script will periodically poll the queue server specified in the config

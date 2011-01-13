@@ -1,3 +1,6 @@
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
 import os
 import sys
 import csv
@@ -11,7 +14,6 @@ from npsgd.model_parameters import *
 class ABMU(StandaloneTask): 
     short_name = 'abmu_c'
     full_name  = 'ABM-U'
-
     subtitle='Algorithmic BDF Model Unifacial'
     parameters = [
             IntegerParameter('nSamples', description="Number of samples", 

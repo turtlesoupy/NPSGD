@@ -1,4 +1,7 @@
 #!/usr/bin/python
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
 """Server for processing client (web-site) requests to NPSGD.
 
 This module is meant to be run as a daemon process in conjunction with npsgd_queue

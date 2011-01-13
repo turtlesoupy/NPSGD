@@ -1,3 +1,6 @@
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
 """Module containing a 'task queue' for the queue daemon."""
 import os
 import sys

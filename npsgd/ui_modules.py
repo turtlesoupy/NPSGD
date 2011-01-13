@@ -1,3 +1,6 @@
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
 """Module containing all modules that are used for Tornado's UI rendering."""
 
 import tornado.web

@@ -1,3 +1,6 @@
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
 import os
 import sys
 import csv
@@ -13,7 +16,6 @@ import abmu_c
 class ABMB(abmu_c.ABMU): 
     short_name = 'abmb_c'
     full_name  = 'ABM-B'
-
     subtitle='Algorithmic BDF Model Bifacial'
     parameters = [
             IntegerParameter('nSamples', description="Number of samples", 

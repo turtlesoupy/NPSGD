@@ -1,3 +1,6 @@
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
 """NPSGD e-mail related module for blocking/non-blocking sends."""
 import smtplib
 import Queue

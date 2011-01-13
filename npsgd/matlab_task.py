@@ -1,3 +1,7 @@
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
+
 """Module containing classes relating to Matlab modelling tasks."""
 import os
 import logging

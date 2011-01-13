@@ -1,3 +1,6 @@
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
 """Config module for reading an NPSGD config file.
 
 This module is meant to be a singleton. It is shared across all modules

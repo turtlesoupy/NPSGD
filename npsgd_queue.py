@@ -1,4 +1,8 @@
 #!/usr/bin/python
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
+
 """Queue server for npsgd modelling tasks.
 
 The queue server is the data backend for NPSGD. It listens to both workers and

@@ -1,3 +1,6 @@
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
 """Module used within the queue daemon for keeping track of confirmation codes."""
 import random
 import string

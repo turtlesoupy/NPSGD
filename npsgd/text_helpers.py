@@ -1,3 +1,6 @@
+# Author: Thomas Dimson [tdimson@gmail.com]
+# Date:   January 2011
+# For distribution details, see LICENSE
 """Module containing any functions that are useful for templates."""
 
 def pretty_forward_time_delta(diff):
