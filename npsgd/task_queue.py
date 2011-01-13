@@ -35,13 +35,29 @@ class TaskQueue(object):
 
         logging.info("Added task to model queue as number %d", len(self.requests))
 
+    def putTaskHead(self, request):
+        """Puts a model into queue at the head (useful for peeking)."""
+        with self.lock:
+            self.requests.insert(0,request)
+
 
     def putProcessingTask(self, task):
         """Puts a model into the queue for worker processing."""
         now = time.time()
         with self.lock:
             self.processingTasks.append((task, now))
+    
+    def pullNextVersioned(self, modelVersions):
+        """Pulls the next model from the worker queue that matches versions."""
+        with self.lock:
+            for i,task in enumerate(self.requests):
+                if [task.__class__.short_name, task.__class__.version] in modelVersions:
+                    del self.requests[i]
+                    return task
 
+        return None
+
+    
     def pullNextTask(self):
         """Pulls a model from the worker queue."""
         with self.lock:

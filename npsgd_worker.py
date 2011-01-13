@@ -11,7 +11,7 @@ import sys
 import time
 import json
 import logging
-import urllib2
+import urllib2, urllib
 from threading import Thread, Event
 from optparse import OptionParser
 
@@ -94,7 +94,11 @@ class NPSGDWorker(object):
         """Workhorse method of actually making requests to the queue for tasks."""
         try:
             logging.info("Polling %s for tasks" % self.taskRequest)
-            response = urllib2.urlopen("%s?secret=%s" % (self.taskRequest, config.requestSecret))
+            #response = urllib2.urlopen("%s?secret=%s" % (self.taskRequest, config.requestSecret))
+            response = urllib2.urlopen(self.taskRequest, data=urllib.urlencode({
+                "secret": config.requestSecret,
+                "model_versions_json": json.dumps(modelManager.modelVersions())
+            }))
         except urllib2.URLError, e:
             self.requestErrors += 1
             logging.error("Error making worker request to server, attempt #%d", self.requestErrors + 1)
@@ -119,6 +123,8 @@ class NPSGDWorker(object):
         if "status" in response:
             if response["status"] == "empty_queue":
                 logging.info("No tasks available on server")
+            elif response["status"] == "no_version":
+                logging.info("Queue lacks any tasks with our model versions")
         elif "task" in response:
             self.processTask(response["task"])
 
@@ -191,8 +197,7 @@ class NPSGDWorker(object):
                 resultsEmail = taskObject.run()
                 logging.info("Model finished running, sending email")
                 if self.serverHasTask(taskObject.taskId):
-                    #FIXME before pushing
-                    #npsgd.email_manager.blockingEmailSend(resultsEmail)
+                    npsgd.email_manager.blockingEmailSend(resultsEmail)
                     logging.info("Email sent, model is 100% complete!")
                     self.notifySucceedTask(taskObject.taskId)
                 else:

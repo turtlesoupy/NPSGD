@@ -27,22 +27,27 @@
 \newpage
 
 \section{Introduction}
-NPSGD was designed to to make it easy to add new models. A model within NPSGD is
-a Python class that inherits from a specific
+NPSGD was designed to to make it easy to add new models. Within a NPSGD, a
+``model'' is a Python class that inherits from a specific
 base class. This class often is a wrapper for an existing implementation of a
-model in another language such as C++ or Matlab. By editing these models, NPSGD
+model in another language such as C++ or Matlab. By editing these model wrappers, NPSGD
 will create a create the web interface with the corresponding parameters. It is up to the
 module to perform the work of running the model and giving meaningful output to
 the user.
 
 \section{Quick Start}
-All models are added to the \mpath{models/} subdirectory and are really just python
-modules in disguise. The quickest way to add a model is to copy \mpath{example.py} to a
-new filename called \mpath{my\_model.py} and change \mpath{short\_name} to
-\mpath{my\_model}. Your model will then be running at \url{http://npsgdserver:8000/models/my_model}.
+The Python model wrappers of NPSGD are located in the \mpath{models/}
+subdirectory an extension of \texttt{.py}. To quickly implement a model wrapper,
+simply copy \mpath{example.py} to a
+new filename called \mpath{my\_model.py}. Edit this file and assign the
+\mpath{short\_name} class variable to \mpath{my\_model}. Your model will now be
+accessible to all of the NPSGD daemons. In particular, you will be able to
+access \texttt{my\_model} via the \texttt{npsgd\_web} daemon at 
+\url{http://npsgdserver:8000/models/my_model}.
 
 Please note that you will have to make sure that the model is available on all
-servers running NPSGD daemons (queue, web, and workers).
+servers running NPSGD daemons (queue, web, and workers) for NPSGD to function
+correctly.
 
 \section{Models}
 In NPSGD, a ``model'' is actually a Python class that inherits, 
@@ -50,12 +55,27 @@ from the base class of \mclass{ModelTask}. This gives the user the
 flexibility to be language-agnostic in terms of model implementation, with a
 quick Python wrapper as a model runner.
 
-All models (with a .py extension) are placed in the \mpath{models/} subdirectory.
+All model wrappers (with a .py extension) are placed in the \mpath{models/} subdirectory.
 Periodically, the \textbf{queue}, \textbf{web},
 and \textbf{worker} daemons will scan this directory for conforming (or newly
 timestamped) classes and load them into memory. From there, the model will be
 immediately accessible from the web, and therefore from the worker and queue. By
-default, the scanner propagation time is 120 seconds.
+default, the scanner propagation time is 120 seconds. If the wrapper file is
+ever removed, the model will continue to be served in memory so that older
+requests can complete.
+
+Model wrappers are loaded with an associated ``version'' - a MD5 hash of the
+file that was used to declare the model wrapper. All requests in NPSGD are keyed
+by both the model name and this version value. When a requests comes in from the
+web page, a hidden parameter is sent telling the \texttt{npsgd\_web} what
+version of the model the user was looking at. This allows for you to update the
+models on disk without destroying requests that are are already in memory (since
+they will execute under the old version).
+
+The model versioning also allows worker machines to have a subset of the models
+available to the queue and web machines. When a worker polls the queue, it gives
+the queue a list of supported model-version pairs. The queue will only return
+requests that were made with models available in this list.
 
 \section{Helper classes}
 \label{sec:helpers}
@@ -83,7 +103,7 @@ processes that occurs in order for this to happen, though the model implementor
 will not have to touch this pipeline at all.
 \begin{enumerate}
    \item A model that is implemented in \mpath{models/example.py} is noticed and
-   loaded by all NPSGD daemons .
+   loaded by all NPSGD daemons.
    \item Online web user visits the web interface for the model, typically at
    \url{http://npsgdserver:8000/models/example}. The user specifies all the parameters
    present in the model and clicks submit.
@@ -123,7 +143,12 @@ create in the model. Typically, these follow a strict order that is specified in
     \item E-mail is sent using \mmethod{sendResultsEmail}.
 \end{enumerate}
 
-Note that the pipeline can be greatly simplified by using the helper methods
+If any of these stages fail, a message will be communicated back to the queue
+telling it that it failed to execute the task. The queue will recycle the request a
+fixed number of times (in case the error is transient) and will send an error
+e-mail eventually if it continues to fail.
+
+Note that the pipeline can be greatly simplified by using the helper classes 
 outlined in Section \ref{sec:helpers}.
 
 \section{Model Implementation}
@@ -141,7 +166,7 @@ model could take the form of
     class MyModel(ModelTask):
         short_name = "my_model"
         full_name  = "My Model"
-        subtitle   = "The best model money can buy"
+        subtitle   = "Super example model"
 \end{lstlisting}
 
 \subsection{Parameters}
@@ -176,14 +201,14 @@ Section \ref{sec:ParameterTypes} has a superset of these options:\\
            cased. \\
     description & As it says, used to describe the parameter. The string
                   specified here will appear in a number of places, including
-                  the output \LaTeX document, and the html page. \\
+                  the output \LaTeX\ document, and the HTML page. \\
     default & Used to specify the default value of a parameter. \\
     hidden  & Boolean used to toggle whether the parameter is hidden or not.
-              Currently, this only affects the output html. Hidden parameters will simply
+              Currently, this only affects the output HTML. Hidden parameters will simply
               be passed along with their default value. This is useful for
               subclassing models\\
     helpText & Used to give ``helpful hints'' when a user is specifying the
-               model. This currently appears as balloon text on the html output
+               model. This currently appears as balloon text on the HTML output
                page.
 \end{tabular}
 
@@ -223,9 +248,13 @@ Currently, NPSGD supports the following parameter types:
 
     \item \texttt{BooleanParameter}: Boolean parameters are similar to the
               \texttt{SelectParamater} type, but now are clamped to true/false. 
-              These parameters will display as text boxes in html and have no
+              These parameters will display as text boxes in HTML and have no
               additional options.
 \end{itemize}
+
+All parameter types are declared in \mpath{npsgd/model\_parameters.py}. Custom
+parameter types could be based off these examples and declared in any file that
+is accessible to the model.
 
 \subsubsection{Attachments}
 \label{sec:attachments}
@@ -285,18 +314,20 @@ executable then you may include the relevant files using the attachment mechanis
 outlined in Section \ref{sec:attachments}.
 
 
-\subsubsection{\LaTeX Output}
+\subsubsection{\LaTeX\ Output}
 \label{sec:LatexOutput}
 Output for all models is generally routed through \texttt{pdflatex}. Each model will
 \textbf{definitely} want to override the \texttt{latexBody} method. This method
-returns a string that is then run through \texttt{pdflatex} in order to generate a file
+returns a string that is inserted into the \LaTeX\ template available in
+\mpath{templates/latex/result\_template.tex}. The resultant tex file is then run through 
+\texttt{pdflatex} in order to generate a file
 called \mpath{result.pdf}. This file, by default, is included in every e-mail
 that is sent out.
 
-\mclass{ModelTask} has a method for creating a \LaTeX table containing
+\mclass{ModelTask} has a method for creating a \LaTeX\ table containing
 all the parameters that the user has specified. By including
-\texttt{self.latexParameterTable()} somewhere in the \LaTeX output the output
-pdf will contain a very nicely formatted parameter table.
+\texttt{self.latexParameterTable()} somewhere in the \LaTeX\ output the output
+PDF will contain a very nicely formatted parameter table.
 
 A complete example:
 \begin{lstlisting}
@@ -315,12 +346,12 @@ A complete example:
 """ % self.latexParameterTable()
 \end{lstlisting}
 
-It is highly recommended that you use python docstrings (triple quoted strings)
+It is highly recommended that you use Python docstrings (triple quoted strings)
 in order to specify output, as well as using the \texttt{r} prefix to the string
 (raw string mode, so you do not have to escape slashes).
 
 \subsubsection{Reading Parameter Values}
-When executing your script, preparing graphs and outputting \LaTeX it is often
+When executing your script, preparing graphs and outputting \LaTeX\ it is often
 necessary to have access to the parameters that the user has specified at the
 web interface. These are \textit{automatically} delivered to the script using
 the names that you specified in for your parameters. By accessing
@@ -350,7 +381,7 @@ subprocess in order to execute a model on the command line. This is the most
 technical part of the process.
 
 \mclass{StandaloneTask} specifies a method of \texttt{runModel} that simply
-executes a command as a python subprocess, and stores the stderr/stdout of the
+executes a command as a Python subprocess, and stores the stderr/stdout of the
 subprocess in instance parameters \texttt{self.stdout} and \texttt{self.stderr}.
 The subprocess is executed within the model's working directory. 
 
@@ -359,7 +390,8 @@ method for running. The class variable \texttt{executable} specifies the path to
 the executable we wish to run (typically the model executable, or something like
 \texttt{java} for a Java task). The instance method \texttt{executableParameters} returns
 a list of parameters for the executable along with values. The parameters are
-specified as a python list. This is best shown via example:
+specified as a Python list. A developer might take the values specified in the
+parameter list for the model wrapper to pass in values to the underlying script. This is best shown via example:
 
 \begin{lstlisting}
     from npsgd.model_task import StandaloneTask
@@ -380,11 +412,19 @@ Such a model will execute \texttt{ls -al /var/tmp} in a subprocess and return th
 \texttt{self.stdout}. Many more examples ship along with NPSGD.
 
 \subsubsection{Helpers: MatlabTask}
-Subclassing \mclass{MatlabTask} automates the process of spawning a matlab
+Subclassing \mclass{MatlabTask} automates the process of spawning a Matlab
 subprocess, which can be a tricky and time consuming process. It also delivers
-the parameter values \textbf{directly} into the matlab environment. The script
+the parameter values \textbf{directly} into the Matlab environment. The script
 will just ``magically'' have access to all the values of user input in variables
-that match the names specified in the model class. 
+that match the names specified in the model class. For example, if you declare a
+parameter named ``myInt'' and the user specifies a value of ``5'', your Matlab
+script will execute in an environment where the ``myInt'' variable is assigned
+5.
+
+NPSGD implements parameter delivery by creating a wrapper script on the fly that
+is fed into Matlab. This Matlab script has all the assignment statements for the
+parameters passed in and finishes with a call to the function that you specify,
+as described below.
 
 A user of the \mclass{MatlabTask} helper need only specify one additional class
 parameter, namely \texttt{matlabScript} which gives the location of the script

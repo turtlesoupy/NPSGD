@@ -8,13 +8,14 @@ responsible for sending out confirmation code e-mail messages.
 """
 import os
 import sys
+import anydbm
+import shelve
 import logging
 import tornado.web
 import tornado.ioloop
 import tornado.escape
 import tornado.httpserver
 import threading
-import shelve
 from datetime import datetime
 from optparse import OptionParser
 
@@ -50,8 +51,10 @@ class QueueGlobals(object):
         self.lastWorkerCheckin = datetime(1,1,1)
 
     def loadDiskTaskQueue(self):
+        """Load task queue from disk using the shelve reserved for the queue."""
+
         if not self.shelve.has_key("taskQueue"):
-            logging.info("Unable to read task queue from disk, starting fresh")
+            logging.info("Unable to read task queue from disk db, starting fresh")
             return
 
         logging.info("Reading task queue from disk")
@@ -67,6 +70,7 @@ class QueueGlobals(object):
                         visibleId=taskDict["visibleId"])
                 body = config.lostTaskEmailTemplate.generate()
                 emailObject = Email(emailAddress, subject, body)
+                logging.info("Invalid model-version pair, notifying %s", emailAddress)
                 npsgd.email_manager.backgroundEmailSend(Email(emailAddress, subject, body))
                 failedTasks += 1
                 continue
@@ -77,8 +81,10 @@ class QueueGlobals(object):
         logging.info("Read %s tasks, failed while reading %s tasks", readTasks, failedTasks)
 
     def loadConfirmationMap(self):
+        """Load confirmation map ([code, modelDict] pairs) from shelve reserved for the queue."""
+
         if not self.shelve.has_key("confirmationMap"):
-            logging.info("Unable to read confirmation map from disk, starting fresh")
+            logging.info("Unable to read confirmation map from disk db, starting fresh")
             return
 
         logging.info("Reading confirmation map from disk")
@@ -93,8 +99,9 @@ class QueueGlobals(object):
                 emailAddress = taskDict["emailAddress"]
                 subject = config.confirmationFailedEmailSubject.generate(full_name=taskDict["modelFullName"], 
                         visibleId=taskDict["visibleId"])
-                body = config.confirmationFailedEmailBody.generate(code=code)
+                body = config.confirmationFailedEmailTemplate.generate(code=code)
                 emailObject = Email(emailAddress, subject, body)
+                logging.info("Invalid model-version pair, notifying %s", emailAddress)
                 npsgd.email_manager.backgroundEmailSend(Email(emailAddress, subject, body))
                 failedCodes += 1
                 continue
@@ -106,14 +113,19 @@ class QueueGlobals(object):
 
 
     def syncShelve(self):
-        with self.shelveLock:
-            self.shelve["taskQueue"]        = [e.asDict() \
-                    for e in self.taskQueue.allRequests()]
-            self.shelve["confirmationMap"]  = dict( (code, task.asDict())\
-                    for (code, task) in self.confirmationMap.getRequestsWithCodes())
+        """Serializes the task queue, confirmation map and id counter to disk using the queue shelve."""
+        try:
+            with self.shelveLock:
+                self.shelve["taskQueue"]        = [e.asDict() \
+                        for e in self.taskQueue.allRequests()]
+                self.shelve["confirmationMap"]  = dict( (code, task.asDict())\
+                        for (code, task) in self.confirmationMap.getRequestsWithCodes())
 
-            with self.idLock:
-                self.shelve["idCounter"] = self.idCounter
+                with self.idLock:
+                    self.shelve["idCounter"] = self.idCounter
+        except pickle.PicklingError, e:
+            logging.warning("Unable sync task queue and confirmation error to disk due to a pickling (serialization error): %s", e)
+            return
 
         logging.info("Synced queue and confirmation map to disk")
 
@@ -164,7 +176,9 @@ class ExpireWorkerTaskThread(threading.Thread):
                     self.taskQueue.putTask(task)
 
 class QueueRequestHandler(tornado.web.RequestHandler):
+    """Superclass to all queue request methods."""
     def checkSecret(self):
+        """Checks the request for a 'secret' parameter that matches the queue's own."""
         if self.get_argument("secret") == config.requestSecret:
             return True
         else:
@@ -196,7 +210,6 @@ class ClientModelCreate(QueueRequestHandler):
         subject = config.confirmEmailSubject.generate(task=task)
         body = config.confirmEmailTemplate.generate(code=code, task=task, expireDelta=config.confirmTimeout)
         emailObject = Email(emailAddress, subject, body)
-        #FIXME BEFORE PUSHING
         npsgd.email_manager.backgroundEmailSend(emailObject)
         glb.syncShelve()
         self.write(tornado.escape.json_encode({
@@ -388,22 +401,30 @@ class WorkerFailedTask(QueueRequestHandler):
 
 class WorkerTaskRequest(QueueRequestHandler):
     """HTTP handler for workers grabbings tasks off the queue."""
-    def get(self):
+    def post(self):
         if not self.checkSecret():
             return
 
+        modelVersions = tornado.escape.json_decode(self.get_argument("model_versions_json"))
+
         glb.touchWorkerCheckin()
-        logging.info("Received worker task request")
+        logging.info("Received worker task request with models %s", modelVersions)
         if glb.taskQueue.isEmpty():
             self.write(tornado.escape.json_encode({
                 "status": "empty_queue"
             }))
         else:
-            task = glb.taskQueue.pullNextTask()
-            glb.taskQueue.putProcessingTask(task)
-            self.write(tornado.escape.json_encode({
-                "task": task.asDict()
-            }))
+            task = glb.taskQueue.pullNextVersioned(modelVersions)
+            if task == None:
+                logging.info("Found no models in queue matching worker's supported versions")
+                self.write(tornado.escape.json_encode({
+                    "status": "no_version"
+                }))
+            else:
+                glb.taskQueue.putProcessingTask(task)
+                self.write(tornado.escape.json_encode({
+                    "task": task.asDict()
+                }))
 
 def main():
     global glb
@@ -422,7 +443,13 @@ def main():
     model_manager.setupModels()
     model_manager.startScannerThread()
 
-    queueShelve  = shelve.open(config.queueFile)
+    try:
+        queueShelve  = shelve.open(config.queueFile)
+    except anydbm.error:
+        logging.warning("Queue file '%s' is corrupt, removing and starting afresh", config.queueFile)
+        os.remove(config.queueFile)
+        queueShelve = shelve.open(config.queueFile)
+
     try:
         glb = QueueGlobals(queueShelve)
         queueHTTP = tornado.httpserver.HTTPServer(tornado.web.Application([

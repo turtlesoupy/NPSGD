@@ -10,7 +10,7 @@ import threading
 from npsgd.config import config
 from model_task import ModelTask
 
-class InvalidModelError: pass
+class InvalidModelError(RuntimeError): pass
 class ModelManager(object):
     """Object for keeping track of all models available to the NPSGD daemons.
     
