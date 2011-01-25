@@ -1,10 +1,15 @@
 jQuery.validator.addMethod(
         "rangeParameter",
         function(value, element, params) {
-            var tmp = $(element).val().split("-",2);
+            var tmp = $(element).val().split("-");
             if(tmp.length != 2) {
                 return false;
             } 
+
+            var simpleFloat = /^(((+|-)?\d+(\.\d*)?)|((+|-)?(\d*\.)?\d+))$/;
+            if(!tmp[0].match(simpleFloat) || !tmp[1].match(simpleFloat)) {
+                return false;
+            }
 
             var start = parseFloat(tmp[0]);
             var end   = parseFloat(tmp[1]);
