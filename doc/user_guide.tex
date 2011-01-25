@@ -9,7 +9,6 @@
 \author{Thomas Dimson\\Natural Phenomenon Simulation Group (NPSG)\\David R. Cheriton School of Computer Science\\University of Waterloo, Canada}
 
 \setlength{\parskip}{0.5\baselineskip}
-\newcommand{\mpath}[1]{\texttt{#1}}
 \newcommand{\mclass}[1]{\texttt{#1}}
 \newcommand{\mmethod}[1]{\texttt{#1}}
 \lstset{ %
@@ -44,6 +43,8 @@ A basic configuration will require:
     and 10.04 but should work on other Linux or BSD based platforms.
 \end{itemize}
 
+The software has very low hardware requirements. It has been stress tested on 
+a single CPU virtual machine with 384 megabytes of RAM. 
 
 \section{System Overview}
 
@@ -51,16 +52,25 @@ A basic configuration will require:
     \centering
     \includegraphics[width=6in]{npsgd_layout.png}
     \caption{Information Flow in NPSGD}
+    \label{fig:layout}
 \end{figure}
+
+Figure \ref{fig:layout} shows a high level overview of the information flow
+within NPSGD. This shows the only client facing daemon, \texttt{npsgd\_web}
+serving requests to the user directly. All daemons have a dependency on the
+model wrappers and thus the source must be synced between them. As a request is
+populated, it is flowed to a disk-backed queue which is polled periodically by
+the workers. Once a worker completes a request, it will notify the user via
+e-mail.
 
 \subsection{Daemons}
 NPSGD is a distributed system which communicates internally and externally via
-http. One of the design goals of the system was to allow multiple machines to
+HTTP. One of the design goals of the system was to allow multiple machines to
 perform as workers to avoid to overloading any particular system. To
 facilitate this, the framework is split into three daemons:
 \begin{itemize}
     \item \texttt{npsgd\_web}: The frontend to NPSGD. The job of this daemon is
-    to communicate with all external clients over http. Since no state is kept
+    to communicate with all external clients over HTTP. Since no state is kept
     inside the daemon, there is no limit to the number of frontends that exist (though one
     should be sufficient unless you are under heavy load). By default, a
     client visiting \url{http://localhost:8000} will hit this daemon.
@@ -83,12 +93,15 @@ facilitate this, the framework is split into three daemons:
 
 If NPSGD is being configured for long term access, all of these daemons should
 have startup scripts associated on the end machine. Sample scripts are available
-in the \mpath{startup/} directory alongside the NPSGD distribution.
+in the \path{startup/} directory alongside the NPSGD distribution.
 
-Internal communication between daemons is always done using HTTP. Parameters are passed via URL-encoded
-JSON that is present in the body of requests for POST requests, and as parameters for GET requests.
-There is a ``secret'' that is passed in plaintext along every HTTP request communicating with the queue and checked
-on the queue side. This
+Internal communication between daemons is performed over HTTP. Parameters are passed via URL-encoded
+JSON that is present in the body of requests for POST requests, and as
+parameters for GET requests. For detailed information on the structure of
+internal requests, please see their implementations in \path{npsgd_web.py},
+\path{npsgd_queue.py} and \path{npsgd_worker.py}. Additionally, 
+there is a ``secret'' that is passed in plaintext along every HTTP request communicating with the queue.
+A secret is a string, specified in the config file, that must match on both client and queue. This
 is \textbf{not} a substitute for a firewall. The queue should be configured to only accept traffic
 on port 9000 from known hosts (those that run \texttt{npsgd\_web} and \texttt{npsgd\_worker}).
 
@@ -128,7 +141,7 @@ would be something like this:
     \item Model execution completes. \texttt{npsgd\_worker} creates a \LaTeX\ 
     document with the results.
 
-    \item \LaTeX document and other attachments are sent to the user's e-mail.
+    \item \LaTeX\ document and other attachments are sent to the user's e-mail.
     \texttt{npsgd\_worker} tells the \texttt{npsgd\_queue} that it has executed successfully.
 \end{enumerate}
 
@@ -165,24 +178,24 @@ NPSGD ships in exactly the same way it was developed and is not easily converted
 into a form that matches the standard UNIX layouts. When you clone the main
 repository for NPSGD, you will see the following files and directories:
 \begin{itemize}
-    \item \mpath{config.example}: An example configuration file for NPSGD.
-    \item \mpath{epydoc.cfg}: Config file for generating an HTML representation
+    \item \path{config.example}: An example configuration file for NPSGD.
+    \item \path{epydoc.cfg}: Config file for generating an HTML representation
           of the code using epydoc.
-    \item \mpath{LICENSE}: License agreement for distribution.
-    \item \mpath{README}: Easy readme guide to NPSGD.
-    \item \mpath{npsgd\_web.py}: Web daemon for handling client requests.
-    \item \mpath{npsgd\_queue.py}: Daemon for queueing NPSGD model runs.
-    \item \mpath{npsgd\_worker.py}: Worker for actually processing NPSGD model
+    \item \path{LICENSE}: License agreement for distribution.
+    \item \path{README}: Easy readme guide to NPSGD.
+    \item \path{npsgd\_web.py}: Web daemon for handling client requests.
+    \item \path{npsgd\_queue.py}: Daemon for queueing NPSGD model runs.
+    \item \path{npsgd\_worker.py}: Worker for actually processing NPSGD model
           runs.
-    \item \mpath{doc/}: Directory containing NPSGD documentation.
-    \item \mpath{models/}: Default directory for storing user-defined models.
-    \item \mpath{npsgd/}: Helper package containing modules required to run the
+    \item \path{doc/}: Directory containing NPSGD documentation.
+    \item \path{models/}: Default directory for storing user-defined models.
+    \item \path{npsgd/}: Helper package containing modules required to run the
           daemons.
-    \item \mpath{startup/}: Directory containing some sample startup scripts for
+    \item \path{startup/}: Directory containing some sample startup scripts for
           Ubuntu (must be modified to specify paths correctly).
-    \item \mpath{static/}: Directory containing static files served by the web
+    \item \path{static/}: Directory containing static files served by the web
           server (Javascript, css).
-    \item \mpath{templates/}: Directory containing templates used by NPSGD.
+    \item \path{templates/}: Directory containing templates used by NPSGD.
 \end{itemize}
 
 \subsection{Templates}
@@ -193,7 +206,7 @@ Templates are used in many different ways within NPSGD:
     \item To create \LaTeX\ markup to send results to the user.
 \end{itemize}
 
-All templates for NPSGD are stored in the \mpath{templates/} subdirectory. This
+All templates for NPSGD are stored in the \path{templates/} subdirectory. This
 is meant to be user defined. The default templates shipped with NPGSD are 
 specific to the models within the Natural Phenomenon Simulation Group and are
 intended to be used as a guide for other NPSGD users.
@@ -206,7 +219,7 @@ templates.
 NPSGD ships with two sets of HTML templates, one for an embedded site (served
 directly without entities like title tags), and one for a basic site. These
 templates are used by the web daemon to display HTML directly to the user. Both are
-available under the \mpath{templates/html/} subdirectory. These files contain:
+available under the \path{templates/html/} subdirectory. These files contain:
 \begin{enumerate}
     \item \texttt{base.html}: Template that all other templates inherit from.
     It could contain entities like HTML headers and footers.
@@ -249,7 +262,7 @@ for the email body. The naming convention is ``name\_body.txt'' for body and
 \end{itemize}
 
 \subsubsection{\LaTeX\ Templates}
-There is only one LaTeX template, namely \mpath{result\_template.tex}. This is
+There is only one LaTeX template, namely \path{result\_template.tex}. This is
 used to declare all the packages required for a model results PDF. Inside, there
 is an empty variable where the details of a model run will go. Models themselves
 specify the model details, but it is always wrapped in this template.
@@ -269,7 +282,7 @@ cp config.example config.cfg
 The config file will need a few changes to run, notably:
 \begin{itemize}
     \item Change \texttt{npsgbase} to point at the directory that you cloned the
-    software into (e.g., \texttt{/home/tdimson/npsgd}).
+    software into (e.g., \path{/home/tdimson/npsgd}).
     \item Change \texttt{pdflatexPath} to point at your \texttt{pdflatex}
     binary.
     \item Change the \texttt{email} section to specify a valid
@@ -310,7 +323,7 @@ This does not force the model implementation to be in Python;
 Python acts as a facilitator between NPSGD and the underyling model. 
 
 Each daemon is configured to monitor the model directory, by default under
-\mpath{models/}. Python files in this directory act as ``plugins'' to the system
+\path{models/}. Python files in this directory act as ``plugins'' to the system
 - models are implemented in them. The daemons periodically scan the directory
 and look at the all the python files, those that inherit from \mclass{ModelTask}
 are imported into the system. When importing, a hash of the file is used to tag
@@ -331,11 +344,11 @@ across the daemons: this is done manually, or via a NFS mount.
 \section{Static Files}
 In addition to templates, NPSGD needs the use of certain static files to
 customize the in-browser behaviour. All static files are available in the
-\mpath{static/} subdirectory.
+\path{static/} subdirectory.
 
 \subsection{Javascript}
 NPSGD uses Javascript to handle parameter verification and provide UI
-widgets for the user. The following are located in the \mpath{static/js}
+widgets for the user. The following are located in the \path{static/js}
 subdirectory:
 \begin{enumerate}
     \item \texttt{npsgd.js}: Our particular javascript files.
@@ -355,7 +368,7 @@ subdirectory:
 
 \subsection{CSS}
 In addition to Javascript, some basic CSS needs to be shared across all
-templates. These are in the \mpath{static/css} subdirectory.
+templates. These are in the \path{static/css} subdirectory.
 \begin{enumerate}
     \item \texttt{npsgd.css}: This provides just a couple of CSS includes that
     are needed across all templates.
@@ -365,6 +378,6 @@ templates. These are in the \mpath{static/css} subdirectory.
 
 \subsection{Images}
 Finally, there are some images that NPSGD needs to display available in the
-\mpath{static/images} subdirectory. 
+\path{static/images} subdirectory. 
 
 \end{document}

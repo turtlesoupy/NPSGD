@@ -2,15 +2,15 @@
 \usepackage{listings}
 \usepackage{hyperref}
 \usepackage{url}
+\usepackage{color}
 \usepackage[letterpaper, hmargin=1.25in, vmargin=1.5in]{geometry}
 
 \title{Adding a new model to NPSGD}
 \author{Thomas Dimson\\Natural Phenomenon Simulation Group (NPSG)\\David R. Cheriton School of Computer Science\\University of Waterloo, Canada}
 
 \setlength{\parskip}{0.5\baselineskip}
-\newcommand{\mpath}[1]{\texttt{#1}}
-\newcommand{\mclass}[1]{\texttt{#1}}
-\newcommand{\mmethod}[1]{\texttt{#1}}
+\newcommand{\mclass}[1]{\sloppy\texttt{#1}}
+\newcommand{\mmethod}[1]{\sloppy\texttt{#1}}
 \lstset{ %
     language=Python,                % choose the language of the code
     showspaces=false,               % show spaces adding particular underscores
@@ -18,6 +18,8 @@
     showtabs=false,                 % show tabs within strings adding particular underscores
     breaklines=true,                % sets automatic line breaking
     breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+    keywordstyle=\color{blue}\bfseries, %
+    commentstyle=\color{green}, %
     basicstyle=\ttfamily
 }
 
@@ -36,11 +38,11 @@ module to perform the work of running the model and giving meaningful output to
 the user.
 
 \section{Quick Start}
-The Python model wrappers of NPSGD are located in the \mpath{models/}
+The Python model wrappers of NPSGD are located in the \path{models/}
 subdirectory an extension of \texttt{.py}. To quickly implement a model wrapper,
-simply copy \mpath{example.py} to a
-new filename called \mpath{my\_model.py}. Edit this file and assign the
-\mpath{short\_name} class variable to \mpath{my\_model}. Your model will now be
+simply copy \path{example.py} to a
+new filename called \path{my\_model.py}. Edit this file and assign the
+\path{short\_name} class variable to \path{my\_model}. Your model will now be
 accessible to all of the NPSGD daemons. In particular, you will be able to
 access \texttt{my\_model} via the \texttt{npsgd\_web} daemon at 
 \url{http://npsgdserver:8000/models/my_model}.
@@ -55,7 +57,7 @@ from the base class of \mclass{ModelTask}. This gives the user the
 flexibility to be language-agnostic in terms of model implementation, with a
 quick Python wrapper as a model runner.
 
-All model wrappers (with a .py extension) are placed in the \mpath{models/} subdirectory.
+All model wrappers (with a .py extension) are placed in the \path{models/} subdirectory.
 Periodically, the \textbf{queue}, \textbf{web},
 and \textbf{worker} daemons will scan this directory for conforming (or newly
 timestamped) classes and load them into memory. From there, the model will be
@@ -102,7 +104,7 @@ data to your model implementation. It is useful to understand exactly the
 processes that occurs in order for this to happen, though the model implementor
 will not have to touch this pipeline at all.
 \begin{enumerate}
-   \item A model that is implemented in \mpath{models/example.py} is noticed and
+   \item A model that is implemented in \path{models/example.py} is noticed and
    loaded by all NPSGD daemons.
    \item Online web user visits the web interface for the model, typically at
    \url{http://npsgdserver:8000/models/example}. The user specifies all the parameters
@@ -129,7 +131,7 @@ create in the model. Typically, these follow a strict order that is specified in
 \mclass{ModelTask} class under the method \mmethod{run}:
 \begin{enumerate}
     \item A working directory is created for the model (usually
-    \mpath{/var/tmp/npsgd/unique\_id}. 
+    \path{/var/tmp/npsgd/unique\_id}. 
     \item Execution is setup in the \mmethod{prepareExecution} method. This is
     generally done by converting parameters into a form (e.g., a file in the
     working directory) that the model can work with.
@@ -157,7 +159,7 @@ This section is a basic guide about specifying a model to run.
 \subsection{Defining a class}
 A model must inherit from \mclass{ModelTask}, or one of
 the specialized helper classes specified in Section \ref{sec:helpers}. The model
-must be saved under \mpath{models/my\_model.py}. For example, a skeleton
+must be saved under \path{models/my\_model.py}. For example, a skeleton
 model could take the form of
 \begin{lstlisting}
     from npsgd.model_task import ModelTask
@@ -171,7 +173,7 @@ model could take the form of
 
 \subsection{Parameters}
 All model parameters are specified in
-the class structure itself, in a list with the name \mpath{parameters}. As an
+the class structure itself, in a list with the name \path{parameters}. As an
 example to start, we could specify an integer representing the number of samples
 to take into account during a simulation, with a default of 1000:
 \begin{lstlisting}
@@ -216,43 +218,43 @@ Section \ref{sec:ParameterTypes} has a superset of these options:\\
 \label{sec:ParameterTypes}
 Currently, NPSGD supports the following parameter types:
 \begin{itemize}
-    \item \texttt{StringParameter}: Basic string input. The only extra option is
-              \texttt{units}, which represents the units of input.
+    \item \mclass{StringParameter}: Basic string input. The only extra option is
+              \mclass{units}, which represents the units of input.
 
-    \item \texttt{FloatParameter}: Basic float input. Float parameters can be
+    \item \mclass{FloatParameter}: Basic float input. Float parameters can be
               used to specify a specific range of inputs by specifying the
-              \texttt{rangeStart}, \texttt{rangeEnd} and \texttt{step} inputs. If both
-              \texttt{rangeStart} and \texttt{rangeEnd} are specified, the float
-              parameter will function as a slider. If only \texttt{rangeStart} or
-              \texttt{rangeEnd} are specified, the input will be clamped to values
-              accordingly. Additionally, floats take a \texttt{units} parameter that
+              \mclass{rangeStart}, \mclass{rangeEnd} and \mclass{step} inputs. If both
+              \mclass{rangeStart} and \mclass{rangeEnd} are specified, the float
+              parameter will function as a slider. If only \mclass{rangeStart} or
+              \mclass{rangeEnd} are specified, the input will be clamped to values
+              accordingly. Additionally, floats take a \mclass{units} parameter that
               can be used to specify the units of the float (\textit{e.g.,} nm, cm)
 
-    \item \texttt{IntegerParameter}: Basic integer input. Integers have exactly
-              the same options as \texttt{FloatParameter}, but will be verified to
+    \item \mclass{IntegerParameter}: Basic integer input. Integers have exactly
+              the same options as \mclass{FloatParameter}, but will be verified to
               ensure the number is an integer.
 
-    \item \texttt{RangeParameter}: Range parameters are used for specifying a
+    \item \mclass{RangeParameter}: Range parameters are used for specifying a
               range of floating point inputs (\textit{e.g.,} 400-2500nm). Options for
-              \texttt{RangeParameter} match \texttt{FloatParameter}, but must
-              have all of \texttt{rangeEnd}, \texttt{rangeEnd} and \texttt{step}
+              \mclass{RangeParameter} match \mclass{FloatParameter}, but must
+              have all of \mclass{rangeEnd}, \mclass{rangeEnd} and \mclass{step}
               specified. The output and default values of a range must be
-              specified as a pair of floats, \textit{e.g.,} \texttt{default=(1,5)},
+              specified as a pair of floats, \textit{e.g.,} \mclass{default=(1,5)},
               representing the range of choices.
 
-    \item \texttt{SelectParameter}: Select parameters are used to clamp input to
+    \item \mclass{SelectParameter}: Select parameters are used to clamp input to
               a specific set of options, something like a combo box. Select
-              parameters have an option called \texttt{options}, which is a list
+              parameters have an option called \mclass{options}, which is a list
               of valid inputs that the select box can take (\textit{e.g.,} ``Strong'',
               ``Weak'').
 
-    \item \texttt{BooleanParameter}: Boolean parameters are similar to the
-              \texttt{SelectParamater} type, but now are clamped to true/false. 
+    \item \mclass{BooleanParameter}: Boolean parameters are similar to the
+              \mclass{SelectParamater} type, but now are clamped to true/false. 
               These parameters will display as text boxes in HTML and have no
               additional options.
 \end{itemize}
 
-All parameter types are declared in \mpath{npsgd/model\_parameters.py}. Custom
+All parameter types are declared in \path{npsgd/model\_parameters.py}. Custom
 parameter types could be based off these examples and declared in any file that
 is accessible to the model.
 
@@ -271,8 +273,8 @@ within the working directory to include. For example,
         attachments = [picture.jpg, data.txt]
         ...
 \end{lstlisting}
-The above code listing would include two e-mail attachments (\mpath{picture.jpg}
-and \mpath{data.txt}) along with the usual \mpath{results.pdf}.
+The above code listing would include two e-mail attachments (\path{picture.jpg}
+and \path{data.txt}) along with the usual \path{results.pdf}.
 
 If you want more flexibility in specifying attachments, consider overriding the
 \texttt{getAttachments} method on \texttt{ModelTask}.
@@ -319,9 +321,9 @@ outlined in Section \ref{sec:attachments}.
 Output for all models is generally routed through \texttt{pdflatex}. Each model will
 \textbf{definitely} want to override the \texttt{latexBody} method. This method
 returns a string that is inserted into the \LaTeX\ template available in
-\mpath{templates/latex/result\_template.tex}. The resultant tex file is then run through 
+\path{templates/latex/result\_template.tex}. The resultant tex file is then run through 
 \texttt{pdflatex} in order to generate a file
-called \mpath{result.pdf}. This file, by default, is included in every e-mail
+called \path{result.pdf}. This file, by default, is included in every e-mail
 that is sent out.
 
 \mclass{ModelTask} has a method for creating a \LaTeX\ table containing
@@ -388,7 +390,7 @@ The subprocess is executed within the model's working directory.
 The model creator must specify one additional parameter, and one additional
 method for running. The class variable \texttt{executable} specifies the path to
 the executable we wish to run (typically the model executable, or something like
-\texttt{java} for a Java task). The instance method \texttt{executableParameters} returns
+\texttt{java} for a Java task). The instance method \mclass{executableParameters} returns
 a list of parameters for the executable along with values. The parameters are
 specified as a Python list. A developer might take the values specified in the
 parameter list for the model wrapper to pass in values to the underlying script. This is best shown via example:
