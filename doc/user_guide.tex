@@ -82,7 +82,7 @@ facilitate this, the framework is split into three daemons:
     but should not be accessed externally (in particular, it should be
     firewalled off). The queue is a listener for other requests with the 
     \texttt{npsgd\_web} and \texttt{npsgd\_queue} daemons communicating directly
-    with the queue via http over port 9000.
+    with the queue via HTTP over port 9000.
 
     \item \texttt{npsgd\_worker}: The model processor of NPSGD. The job of these
     daemons are to poll the queue for model requests and process them.
