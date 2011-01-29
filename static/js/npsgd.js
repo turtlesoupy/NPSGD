@@ -6,8 +6,8 @@ jQuery.validator.addMethod(
                 return false;
             } 
 
-            var simpleFloat = new RegExp("^(((+|-)?\d+(\.\d*)?)|((+|-)?(\d*\.)?\d+))$");
-            if(!tmp[0].match(simpleFloat) || !tmp[1].match(simpleFloat)) {
+            var simpleFloat = /^[-+]?[0-9]+(\.[0-9]+)?$/;
+            if(!simpleFloat.test(tmp[0]) || !simpleFloat.test(tmp[1])) {
                 return false;
             }
 
