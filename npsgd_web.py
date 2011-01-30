@@ -103,7 +103,15 @@ class ClientModelRequest(tornado.web.RequestHandler):
     def post(self, modelName):
         """Post handler to actually create a model task with given parameters."""
         modelVersion = self.get_argument("modelVersion")
-        model = modelManager.getModel(modelName, modelVersion)
+        try:
+            model = modelManager.getModel(modelName, modelVersion)
+        except KeyError:
+            self.queueErrorRender(
+                " We are sorry. Your model request did not match any models available."
+                " This is probably caused by an upgrade to the model versions, " +
+                " and will be fixed if you resubmit your request.")
+            return
+
         try:
             task = self.setupModelTask(model)
         except ValidationError, e:
