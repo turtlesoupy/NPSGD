@@ -1,3 +1,5 @@
+Natural Phenomenon Simulation Group Distributed (NPSGD)
+
 NPSGD is a web framework for long running scientific models 
 running on distributed worker machines.
 
@@ -8,38 +10,8 @@ that no modifications will be required.
 
 NPSGD is available under a BSD-style license. See LICENSE for details.
 
-This software is far from production ready and is under active development
-I don't recommend using it except to play around with. Documentation is
-non-existent for a while.
+This software is currently deployed on the homepage of the Natural
+Phenomenon Simulation Group, http://www.npsg.uwaterloo.ca/
 
-If you are brave enough, here's how it works:
-    - You create models/whatever.py. See "example.py". This amounts
-      to you specifying parameters and outputs as well as a LaTeX way of
-      displaying them.
-    - Visit http://your-server:8000/models/whatever.  The model will be 
-      automatically converted to a web page as requests come in. Specify your
-      email, confirm the request and your model will run on worker machines.
-    - The output graphs, LaTeX files, etc. will all be shipped as attachments
-      to an email sent to the user after your model completes.
-
-The server itself is designed to be scalable, distributed and fault tolerant. It comes
-in three parts:
-    - npsgd_web.py:    Server that actually serves client requests. Very basic
-                       templates are available in the templates/ directory. You can
-                       run this directly, behind a proxy, or embedded in a php
-                       site. 
-
-    - npsgd_queue.py:  Queue server. Co-ordinates requests from the web and
-                       worker machines that can execute them.
-
-    - npsgd_worker.py: Worker processes take requests from the queue server and
-                       execute the models. There are no limits on the number of
-                       workers at time. They are designed to be long running
-                       (i.e. longer than a few hours)
-
-Communication to the queue is all done through http. Firewall your machines!
-
-Requirements:
-    - Python 2.5 and higher (possibly 2.6)
-    - Python's Tornado web server (http://www.tornadoweb.org/)
-    - Matlab if you want to run matlab scripts
+Documentation is available in the doc/ directory after cloning a copy of
+the software and will be available online shortly.
