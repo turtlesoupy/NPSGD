@@ -10,5 +10,5 @@ will expire in {{npsgd.text_helpers.pretty_forward_time_delta(expireDelta)}}.
 Your specified parameters were:
 {{task.textParameterTable()}}
 
-Natural Phenomenon Simulation Group
+Natural Phenomena Simulation Group
 University of Waterloo

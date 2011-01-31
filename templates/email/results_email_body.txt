@@ -7,5 +7,5 @@ that the run succeeded. We have attached a pdf copy of the results to this messa
 Your specified parameters were:
 {{task.textParameterTable()}}
 
-Natural Phenomenon Simulation Group
+Natural Phenomena Simulation Group
 University of Waterloo

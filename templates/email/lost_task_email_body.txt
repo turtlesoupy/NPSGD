@@ -6,5 +6,5 @@ and were unable to synchronize your request.
 
 You can try to rerun again at any time.
 
-Natural Phenomenon Simulation Group
+Natural Phenomena Simulation Group
 University of Waterloo

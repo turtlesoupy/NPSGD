@@ -84,7 +84,7 @@ class ABMB(abmu_c.ABMU):
     def latexBody(self):
         return r"""
             These are the results of your run of the \textbf{ABM-B} model provided by the 
-            Natural Phenomenon Simulation Group (NPSG) at the University of Waterloo.
+            Natural Phenomena Simulation Group (NPSG) at the University of Waterloo.
 
             The ABM-B employs an algorithmic Monte Carlo formulation 
             to simulate light interactions with bifacial plant leaves 

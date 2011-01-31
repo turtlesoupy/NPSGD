@@ -4,6 +4,5 @@ We regret to inform you that your confirmation code {{code}} has expired early
 because we have uploaded a new version of the model to the server. Feel free to
 resubmit at any time.
 
-Natural Phenomenon Simulation Group
+Natural Phenomena Simulation Group
 University of Waterloo
-

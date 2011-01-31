@@ -177,7 +177,7 @@ class ABMU(StandaloneTask):
     def latexBody(self):
         return r"""
             These are the results of your run of the \textbf{ABM-U} model provided by the 
-            Natural Phenomenon Simulation Group (NPSG) at the University of Waterloo.
+            Natural Phenomena Simulation Group (NPSG) at the University of Waterloo.
 
             The ABM-U employs an algorithmic Monte Carlo formulation 
             to simulate light interactions with unifacial plant leaves 
