@@ -1,4 +1,5 @@
 Natural Phenomena Simulation Group Distributed (NPSGD)
+http://www.npsg.uwaterloo.ca/models/npsgd_software.php
 
 NPSGD is a web framework for long running scientific models 
 running on distributed worker machines.
@@ -11,7 +12,11 @@ that no modifications will be required.
 NPSGD is available under a BSD-style license. See LICENSE for details.
 
 This software is currently deployed on the homepage of the Natural
-Phenomena Simulation Group, http://www.npsg.uwaterloo.ca/
+Phenomena Simulation Group. See a sample here: 
+http://www.npsg.uwaterloo.ca/models/ABMU.php
 
 Documentation is available in the doc/ directory after cloning a copy of
-the software and will be available online shortly.
+the software. It is also available online:
+    - User manual: http://www.npsg.uwaterloo.ca/models/docs/user_guide.pdf
+    - Model creation guide: http://www.npsg.uwaterloo.ca/models/docs/model_tutorial.pdf
+    - Source code documentation: http://www.npsg.uwaterloo.ca/models/docs/source/
