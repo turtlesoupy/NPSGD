@@ -70,8 +70,8 @@ class ClientModelRequest(tornado.web.RequestHandler):
         """Render the html associated with a given model object."""
         self.render(config.modelTemplatePath, model=model, errorText=None)
 
-    def queueErrorRender(self, errorText):
-        self.render(config.modelErrorTemplatePath, errorText=errorText)
+    def queueErrorRender(self, errorText, model):
+        self.render(config.modelErrorTemplatePath, errorText=errorText, model=model)
 
     def queueCallback(self, response, model=None):
         """Asynchronous callback from the queue (for checking if it is up, or has workers).
@@ -81,7 +81,7 @@ class ClientModelRequest(tornado.web.RequestHandler):
         """
         global lastWorkerCheckSuccess
         if response.error: 
-            self.queueErrorRender("We are sorry. Our queuing server appears to be down at the moment, please try again later")
+            self.queueErrorRender("We are sorry. Our queuing server appears to be down at the moment, please try again later", model)
             return
 
         try:
@@ -171,10 +171,10 @@ class ClientModelRequest(tornado.web.RequestHandler):
 
 
 class ClientBaseRequest(tornado.web.RequestHandler):
-    """Index response handler (e.g. http://localhost:8000): do nothing for now."""
+    """Index response handler (e.g. http://localhost:8000): render a tiny page for now."""
 
     def get(self):
-        self.write("Find a model!")
+        self.render(config.listModelsTemplatePath, modelNames=modelManager.modelNames())
 
 class ClientConfirmRequest(tornado.web.RequestHandler):
     """HTTP confirmation code handler.

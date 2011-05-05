@@ -2,5 +2,7 @@
 {% block content %}
 <h1 class="modelTitle"> {{model.full_name}} </h1>
 <h2 class="modelSubtitle"> {{model.subtitle}} </h2>
-{{errorText}}
+<div class="errorMessage">
+  {{errorText}}
+</div>
 {% end %}

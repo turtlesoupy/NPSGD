@@ -1,12 +1,12 @@
 [DEFAULT]
-npsgBase     = /home/tdimson/public_html/npsg/npsgd
+npsgdBase = ROOT_DIRECTORY
 
 [npsgd]
-htmlTemplateDirectory        = %(npsgBase)s/templates/html/embedded
-emailTemplateDirectory       = %(npsgBase)s/templates/email
-latexTemplateDirectory       = %(npsgBase)s/templates/latex
-modelDirectory               = %(npsgBase)s/models
-dataDirectory                = %(npsgBase)s/data
+htmlTemplateDirectory        = %(npsgdBase)s/templates/html/basic
+emailTemplateDirectory       = %(npsgdBase)s/templates/email
+latexTemplateDirectory       = %(npsgdBase)s/templates/latex
+modelDirectory               = %(npsgdBase)s/models
+dataDirectory                = %(npsgdBase)s/data
 queueFile                    = %(dataDirectory)s/queue
 resultsEmailSubjectPath      = results_email_subject.txt
 resultsEmailBodyPath         = results_email_body.txt
@@ -23,6 +23,8 @@ modelErrorTemplatePath       = model_error.html
 confirmTemplatePath          = confirm.html
 confirmedTemplatePath        = confirmed.html
 alreadyConfirmedTemplatePath = already_confirmed.html
+listModelsTemplatePath       = list_models.html
+advertisedRoot               = http://127.0.0.1:8000
 confirmTimeout               = 2880 ;Minutes (2 days)
 maxJobFailures               = 3
 modelScanInterval            = 10
@@ -40,6 +42,7 @@ smtpServer      = smtp.gmail.com
 smtpPort        = 587
 smtpUseTLS      = true
 smtpUseAuth     = true
+maxAttempts     = 10
 #The following are comma separated if you wish multiple recipients
 cc              = 
 bcc             = 
@@ -50,5 +53,5 @@ resultTemplate = result_template.tex
 numRuns = 2
 
 [Matlab]
-required   = true
+required   = false
 matlabPath = /usr/local/MATLAB/R2010b/bin/matlab

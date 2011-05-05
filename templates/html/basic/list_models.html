@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Welcome to NPSGD!</h1>
+<div>
+  Currently, the following models are available:
+  <ul>
+    {% for modelName in modelNames %}
+      <li><a href="/models/{{modelName}}">{{modelName}}</a></li>
+    {% end %}
+  </ul>
+</div>
+{% end %}

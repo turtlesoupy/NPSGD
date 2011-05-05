@@ -6,7 +6,7 @@ import sys
 import csv
 import json
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use("Agg", warn=False)
 import matplotlib.pyplot as plt
 from npsgd.standalone_task import StandaloneTask 
 from npsgd.model_parameters import *
@@ -15,6 +15,8 @@ class ABMU(StandaloneTask):
     short_name = 'abmu_c'
     full_name  = 'ABM-U'
     subtitle='Algorithmic BDF Model Unifacial'
+    executable = "/home/tdimson/public_html/npsg/abmb_abmu_cpp/abmu"
+
     parameters = [
             IntegerParameter('nSamples', description="Number of samples", 
                 rangeStart=1000, rangeEnd=100000, step=1, default=10000),
@@ -56,8 +58,6 @@ class ABMU(StandaloneTask):
     ]
 
     attachments   = ['spectral_distribution.csv', 'reflectance.png', 'transmittance.png', 'absorptance.png']
-
-    executable = "/home/tdimson/public_html/npsg/abmb_abmu_cpp/abmu"
 
     def executableParameters(self):
         if self.surfaceOfIncidence.value == "Abaxial":

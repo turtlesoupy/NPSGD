@@ -11,12 +11,27 @@ that no modifications will be required.
 
 NPSGD is available under a BSD-style license. See LICENSE for details.
 
-This software is currently deployed on the homepage of the Natural
-Phenomena Simulation Group. See a sample here: 
-http://www.npsg.uwaterloo.ca/models/ABMU.php
+A demo of the software is available here: http://www.npsg.uwaterloo.ca/models/ABMU.php
 
-Documentation is available in the doc/ directory after cloning a copy of
-the software. It is also available online:
+System Requirements:
+  - Python 2.5 or higher (http://www.python.org/)
+  - The Tornado Web server for Python (http://www.tornadoweb.org/)
+  - Matplotlib for Python (http://matplotlib.sourceforge.net/)
+  - A LaTeX distribution of some form (e.g. texlive)
+  - UNIX-like operating system. NPSGD has been tested on Ubuntu Linux 9.04 and 10.04
+
+Quick start:
+  - Clone a copy of NPSGD
+  - Copy NPSGD/config.example to NPSGD/config.cfg and configure the email server
+  - Download and compile a copy of ABMU/ABMB from 
+    http://github.com/cosbynator/ABM-U-and-ABM-B-CPP
+  - Edit models/abmu_c.py and change 'executable' to your compiled location
+  - Start servers: "python npsgd_web.py", "python npsgd_queue.py" and
+    "python npsgd_worker.py"
+  - Visit http://127.0.0.1:8000 to see available models and run abmu_c
+  - See full documentation for more details
+
+Full documentation is available in the doc/ directory or online:
     - User manual: http://www.npsg.uwaterloo.ca/models/docs/user_guide.pdf
     - Model creation guide: http://www.npsg.uwaterloo.ca/models/docs/model_tutorial.pdf
     - Source code documentation: http://www.npsg.uwaterloo.ca/models/docs/source/

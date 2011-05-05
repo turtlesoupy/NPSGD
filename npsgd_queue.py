@@ -447,6 +447,10 @@ def main():
     model_manager.setupModels()
     model_manager.startScannerThread()
 
+    if not os.path.exists(os.path.dirname(config.queueFile)):
+        logging.warning("Queue directory does not exist, attempting to create")
+        os.makedirs(os.path.dirname(config.queueFile))
+
     try:
         queueShelve  = shelve.open(config.queueFile)
     except anydbm.error:

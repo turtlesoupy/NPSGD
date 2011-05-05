@@ -19,7 +19,7 @@ class ConfigError(RuntimeError): pass
 class Config(object):
     """Internal class for handling NPSGD configs."""
     def __init__(self):
-        pass
+        self.rootDirectory = os.path.dirname(os.path.abspath(os.path.join(__file__, '../')))
 
     def setupLogging(self, logPath):
         """Helper method for setting up logging across daemons."""
@@ -34,8 +34,15 @@ class Config(object):
     def loadConfig(self, configPath):
         """Reads config file and loads templates using Tornado's template module."""
 
+        if not os.path.exists(configPath):
+            raise RuntimeError("Configuration file %s does not exist!" % configPath)
+
         config = ConfigParser.SafeConfigParser()
         config.read(configPath)
+
+        npsgdBase = config.get("DEFAULT", 'npsgdBase')
+        if npsgdBase == "ROOT_DIRECTORY":
+            config.set("DEFAULT", 'npsgdBase', self.rootDirectory)
 
         self.matlabPath               = config.get('Matlab', 'matlabPath')
         self.matlabRequired           = config.getboolean('Matlab', 'required')
@@ -69,9 +76,9 @@ class Config(object):
         self.emailTemplateDirectory   = config.get("npsgd", "emailTemplateDirectory")
         self.latexTemplateDirectory   = config.get("npsgd", "latexTemplateDirectory")
         self.requestSecret            = config.get("npsgd", "requestSecret")
-
+        self.listModelsTemplatePath   = config.get("npsgd", 'listModelsTemplatePath')
+        self.advertisedRoot           = config.get("npsgd", "advertisedRoot")
         self.alreadyConfirmedTemplatePath    = config.get('npsgd', 'alreadyConfirmedTemplatePath')
-
 
         if not os.path.exists(self.htmlTemplateDirectory):
             raise ConfigError("HTML template directory '%s' does not exist" % self.htmlTemplateDirectory)
@@ -111,6 +118,7 @@ class Config(object):
         self.smtpUseTLS   = config.getboolean("email", "smtpUseTLS")
         self.smtpUseAuth  = config.getboolean("email", "smtpUseAuth")
         self.fromAddress  = config.get("email", "fromAddress")
+        self.maxAttempts  = config.getint("email", "maxAttempts")
         self.bcc          = [e.strip() for e in config.get("email", "bcc").split(",") if e.strip() != ""]
         self.cc           = [e.strip() for e in config.get("email", "cc").split(",") if e.strip() != ""]
 

@@ -75,11 +75,15 @@ class EmailManagerThread(Thread):
         while True:
             try:
                 email = self.queue.get(True)
+                email.attempts += 1
                 logging.info("Email Manager: Found email in the queue, attempting to send")
                 blockingEmailSend(email)
             except Exception:
                 logging.exception("Unhandled exception in email thread!")
-                self.queue.put(email)
+                if email.attempts > config.maxAttempts:
+                  logging.warning("Timing out email to '%s' after %s attempts", email.recipient, email.attempts)
+                else:
+                  self.queue.put(email)
 
 class Email(object):
     """Actual e-mail object containing all information needed to send an e-mail.
@@ -93,6 +97,7 @@ class Email(object):
         self.body              = body
         self.binaryAttachments = binaryAttachments
         self.textAttachments   = textAttachments
+        self.attempts          = 0
 
     def sendThrough(self, smtpServer):
         """Sends this e-mail through a given smtp server (blocking)."""
