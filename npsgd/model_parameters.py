@@ -251,7 +251,7 @@ class RangeParameter(ModelParameter):
         self.rangeStart  = rangeStart
         self.rangeEnd    = rangeEnd
         self.step        = step
-        self.default     = None
+        self.default     = default
         self.units       = units
         self.hidden      = hidden
         self.helpText    = helpText
